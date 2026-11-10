@@ -1,0 +1,20 @@
+{
+  "name": "company-landing-page",
+  "version": "1.0.0",
+  "description": "NextWave enterprise company landing page & inquiry board with Cloudflare D1",
+  "scripts": {
+    "dev": "wrangler pages dev . --d1 DB=company_inquiry_db --port 8788",
+    "deploy": "wrangler pages deploy . --project-name company-landing-page --branch main",
+    "db:migrate": "wrangler d1 execute DB --local --file=migrations/0001_init.sql"
+  },
+  "keywords": [
+    "cloudflare-pages",
+    "wrangler",
+    "cloudflare-d1",
+    "html",
+    "css",
+    "vanilla-js"
+  ],
+  "author": "NextWave",
+  "license": "ISC"
+}
