@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      width: 1200px;
+      height: 630px;
+      background: #090d16;
+      font-family: -apple-system, BlinkMacSystemFont, "Pretendard", "Segoe UI", Roboto, sans-serif;
+      color: #f8fafc;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 70px 80px;
+      position: relative;
+      overflow: hidden;
+    }
+    .glow-1 {
+      position: absolute;
+      top: -100px;
+      right: -80px;
+      width: 500px;
+      height: 500px;
+      background: radial-gradient(circle, rgba(16, 185, 129, 0.3) 0%, rgba(16, 185, 129, 0) 70%);
+      filter: blur(50px);
+      z-index: 1;
+    }
+    .glow-2 {
+      position: absolute;
+      bottom: -120px;
+      left: 15%;
+      width: 450px;
+      height: 450px;
+      background: radial-gradient(circle, rgba(56, 189, 248, 0.25) 0%, rgba(56, 189, 248, 0) 70%);
+      filter: blur(60px);
+      z-index: 1;
+    }
+    .grid-pattern {
+      position: absolute;
+      inset: 0;
+      background-image: 
+        linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+      z-index: 1;
+    }
+    .content {
+      position: relative;
+      z-index: 2;
+    }
+    .top-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .brand-name {
+      font-size: 32px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      background: linear-gradient(135deg, #ffffff 40%, #cbd5e1 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 18px;
+      border-radius: 9999px;
+      background: rgba(16, 185, 129, 0.12);
+      border: 1px solid rgba(16, 185, 129, 0.35);
+      font-size: 16px;
+      font-weight: 600;
+      color: #34d399;
+      letter-spacing: 0.5px;
+    }
+    .main-body {
+      margin-top: 30px;
+    }
+    .title {
+      font-size: 54px;
+      font-weight: 800;
+      line-height: 1.25;
+      letter-spacing: -1.5px;
+      margin-bottom: 22px;
+      background: linear-gradient(135deg, #ffffff 0%, #f1f5f9 60%, #94a3b8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .highlight {
+      background: linear-gradient(135deg, #34d399 0%, #38bdf8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .desc {
+      font-size: 24px;
+      line-height: 1.55;
+      color: #94a3b8;
+      font-weight: 400;
+      max-width: 900px;
+    }
+    .footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      padding-top: 24px;
+      position: relative;
+      z-index: 2;
+    }
+    .tags {
+      display: flex;
+      gap: 12px;
+    }
+    .tag {
+      padding: 6px 14px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 8px;
+      font-size: 15px;
+      color: #cbd5e1;
+    }
+    .domain {
+      font-size: 18px;
+      color: #64748b;
+      font-weight: 500;
+    }
+  </style>
+</head>
+<body>
+  <div class="glow-1"></div>
+  <div class="glow-2"></div>
+  <div class="grid-pattern"></div>
+
+  <div class="content">
+    <div class="top-bar">
+      <div class="brand">
+        <svg width="44" height="44" viewBox="0 0 32 32" fill="none">
+          <path d="M4 22L14 6L20 16L28 4" stroke="url(#logo-grad)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="28" cy="4" r="3" fill="#6366F1"/>
+          <defs>
+            <linearGradient id="logo-grad" x1="4" y1="22" x2="28" y2="4" gradientUnits="userSpaceOnUse">
+              <stop stop-color="#38BDF8"/>
+              <stop offset="1" stop-color="#6366F1"/>
+            </linearGradient>
+          </defs>
+        </svg>
+        <span class="brand-name">NextWave</span>
+      </div>
+      <div class="badge">
+        <span>● 1:1 맞춤 상담 게시판</span>
+      </div>
+    </div>
+
+    <div class="main-body">
+      <h1 class="title">
+        고객 <span class="highlight">도입 및 기술 문의</span> 게시판
+      </h1>
+      <p class="desc">
+        넥스트웨이브 솔루션 도입 문의와 기술 상담을 자유롭게 남겨주세요.<br>
+        비회원도 간편하게 비밀번호로 문의글을 등록하고 답변을 확인하실 수 있습니다.
+      </p>
+    </div>
+  </div>
+
+  <div class="footer">
+    <div class="tags">
+      <span class="tag">비회원 간편 문의</span>
+      <span class="tag">비밀글 지원</span>
+      <span class="tag">전문 엔지니어 상담</span>
+    </div>
+    <div class="domain">company-landing-page-7hh.pages.dev/board</div>
+  </div>
+</body>
+</html>

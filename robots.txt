@@ -1,2 +1,5 @@
 User-agent: *
 Allow: /
+Disallow: /admin
+
+Sitemap: https://company-landing-page-7hh.pages.dev/sitemap.xml
