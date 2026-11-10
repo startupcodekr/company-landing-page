@@ -1,12 +1,13 @@
 /**
  * NextWave Solutions - Board & Admin Logic
- * Pure Vanilla JavaScript with LocalStorage persistence
+ * Connected with Cloudflare Worker & D1 Database (with fallback)
  */
 
+const WORKER_API_BASE = 'https://company-inquiry-api.startupcode2021.workers.dev';
 const STORAGE_KEY_POSTS = 'nw_board_posts';
 const STORAGE_KEY_ADMIN = 'nw_admin_session';
 
-// 초기 샘플 문의 데이터
+// 초기 샘플 문의 데이터 (오프라인/네트워크 폴백용)
 const INITIAL_SAMPLE_POSTS = [
   {
     id: 1,
@@ -23,7 +24,7 @@ const INITIAL_SAMPLE_POSTS = [
       {
         id: 101,
         author: '넥스트웨이브 솔루션즈 (아키텍처팀)',
-        content: '안녕하세요, 최현우 팀장님. 넥스트웨이브 클라우드 아키텍처팀입니다.\n문의주신 18TB급 대용량 오라클 환경의 마이그레이션은 AWS DMS(Database Migration Service)와 CDC(Change Data Capture) 파이프라인을 연계하여 다운타임을 1시간 이내로 단축하는 컷오버 프레임워크를 보유하고 있습니다.\n\n남겨주신 이메일로 PoC 사례집과 단계별 추진 로드맵 백서를 전달해 드렸으니 확인 부탁드립니다. 유선 상담도 가능합니다.',
+        content: '안녕하세요, 최현우 팀장님. 넥스트웨이브 클라우드 아키텍처팀입니다.\n문의주신 18TB급 대용량 오라클 환경의 마이그레이션은 AWS DMS와 CDC 파이프라인을 연계하여 다운타임을 1시간 이내로 단축하는 컷오버 프레임워크를 보유하고 있습니다.',
         createdAt: '2026-11-08 14:15'
       }
     ]
@@ -43,21 +44,8 @@ const INITIAL_SAMPLE_POSTS = [
   },
   {
     id: 3,
-    title: '글로벌 물류 트랜잭션 실시간 Kafka 파이프라인 성능 튜닝 자문',
-    content: '현재 일일 3억 건 이상의 이벤트 스트림이 유입되고 있으나, 특정 피크 타임에 컨슈머 랙(Consumer Lag)이 급격히 증가하고 있습니다.\n파티션 전략 및 클러스터 아키텍처 진단 컨설팅 가능 일정이 궁금합니다.',
-    author: '이영재',
-    password: 'guest1234',
-    email: 'yjlee@logis.sample.net',
-    category: '기술 솔루션',
-    isSecret: false,
-    views: 18,
-    createdAt: '2026-11-10 09:15',
-    replies: []
-  },
-  {
-    id: 4,
     title: '신규 엔터프라이즈 솔루션 도입 예산안 및 파트너십 제휴 제안서 (비공개)',
-    content: '동남아시아 3개국 지사 통합 ERP 및 데이터 플랫폼 구축 건에 대해 넥스트웨이브와의 전략적 컨소시엄 구성을 제안드리고자 합니다. 세부 RFP는 첨부 내용 확인 부탁드립니다.',
+    content: '동남아시아 3개국 지사 통합 ERP 및 데이터 플랫폼 구축 건에 대해 넥스트웨이브와의 전략적 컨소시엄 구성을 제안드리고자 합니다.',
     author: '정다은 본부장',
     password: 'secret1234',
     email: 'de.jung@global-corp.sample',
@@ -70,7 +58,28 @@ const INITIAL_SAMPLE_POSTS = [
 ];
 
 /* ==========================================================================
-   Data Helpers (LocalStorage CRUD)
+   API Client with Cloudflare Worker
+   ========================================================================== */
+async function fetchAPI(endpoint, options = {}) {
+  try {
+    const res = await fetch(`${WORKER_API_BASE}${endpoint}`, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(isAdminLoggedIn() ? { 'X-Admin-Token': 'admin-authenticated-token' } : {}),
+        ...options.headers
+      }
+    });
+    const data = await res.json();
+    return { ok: res.ok, status: res.status, data };
+  } catch (err) {
+    console.warn('API fetch failed, falling back to LocalStorage:', err);
+    return { ok: false, error: err.message };
+  }
+}
+
+/* ==========================================================================
+   LocalStorage Fallback Helpers
    ========================================================================== */
 function getStoredPosts() {
   const data = localStorage.getItem(STORAGE_KEY_POSTS);
@@ -113,7 +122,7 @@ function formatDate(date) {
 }
 
 /* ==========================================================================
-   Global Theme Initialization
+   Theme & Toast
    ========================================================================== */
 function initThemeToggle() {
   const themeToggle = document.getElementById('themeToggle');
@@ -130,9 +139,6 @@ function initThemeToggle() {
   }
 }
 
-/* ==========================================================================
-   Toast Notification
-   ========================================================================== */
 function showToast(message, title = '알림', isError = false) {
   const toast = document.getElementById('boardToast') || document.getElementById('adminToast');
   if (!toast) return;
@@ -159,17 +165,17 @@ function showToast(message, title = '알림', isError = false) {
 }
 
 /* ==========================================================================
-   Page Specific Handlers: board.html
+   Page: board.html
    ========================================================================== */
 function initBoardPage() {
   const tableBody = document.getElementById('boardTableBody');
-  if (!tableBody) return; // Not on board.html
+  if (!tableBody) return;
 
   let currentFilter = 'all';
   let searchQuery = '';
   let activeViewingPostId = null;
 
-  // DOM Elements
+  // Elements
   const writeModal = document.getElementById('writeModal');
   const detailModal = document.getElementById('detailModal');
   const secretAuthModal = document.getElementById('secretAuthModal');
@@ -181,7 +187,7 @@ function initBoardPage() {
   const searchInput = document.getElementById('searchInput');
   const filterBtns = document.querySelectorAll('.filter-btn');
 
-  // Detail Modal Elements
+  // Detail Elements
   const closeDetailBtn = document.getElementById('closeDetailModal');
   const closeDetailBtnFooter = document.getElementById('closeDetailBtn');
   const adminReplyBox = document.getElementById('adminReplyBox');
@@ -197,9 +203,8 @@ function initBoardPage() {
   const confirmSecretBtn = document.getElementById('confirmSecretAuth');
   const secretPwInput = document.getElementById('secretPasswordInput');
   const secretErrorMsg = document.getElementById('secretErrorMsg');
-  let pendingSecretPostId = null;
+  let pendingSecretPost = null;
 
-  // Admin Banner & Link Status
   function updateAdminHeaderStatus() {
     const adminBanner = document.getElementById('adminBanner');
     const adminLoginLink = document.getElementById('adminLoginLink');
@@ -231,53 +236,56 @@ function initBoardPage() {
     }
   }
 
-  // Render Board Posts
-  function renderBoard() {
-    const posts = getStoredPosts();
-    let filtered = posts.filter(post => {
-      // Filter status
-      const hasReplies = post.replies && post.replies.length > 0;
-      if (currentFilter === 'waiting' && hasReplies) return false;
-      if (currentFilter === 'completed' && !hasReplies) return false;
+  // Render Board Posts from Cloudflare Worker D1
+  async function renderBoard() {
+    let posts = [];
+    const res = await fetchAPI(`/api/posts?filter=${currentFilter}&search=${encodeURIComponent(searchQuery)}`);
 
-      // Search filter
-      if (searchQuery) {
-        const q = searchQuery.toLowerCase();
-        const matchTitle = post.title.toLowerCase().includes(q);
-        const matchAuthor = post.author.toLowerCase().includes(q);
-        const matchContent = post.content.toLowerCase().includes(q);
-        return matchTitle || matchAuthor || matchContent;
-      }
-      return true;
-    });
+    if (res.ok && res.data.posts) {
+      posts = res.data.posts;
+    } else {
+      // LocalStorage Fallback
+      posts = getStoredPosts().filter(post => {
+        const hasReplies = post.replies && post.replies.length > 0;
+        if (currentFilter === 'waiting' && hasReplies) return false;
+        if (currentFilter === 'completed' && !hasReplies) return false;
+        if (searchQuery) {
+          const q = searchQuery.toLowerCase();
+          return post.title.toLowerCase().includes(q) || post.author.toLowerCase().includes(q);
+        }
+        return true;
+      });
+    }
 
-    // Counts update
-    const totalCount = posts.length;
-    const waitingCount = posts.filter(p => !p.replies || p.replies.length === 0).length;
-    const completedCount = totalCount - waitingCount;
+    // Update Counts via Stats API
+    const statsRes = await fetchAPI('/api/stats');
+    if (statsRes.ok) {
+      document.getElementById('countAll').textContent = statsRes.data.total;
+      document.getElementById('countWaiting').textContent = statsRes.data.waiting;
+      document.getElementById('countCompleted').textContent = statsRes.data.completed;
+    } else {
+      const allLocal = getStoredPosts();
+      const waiting = allLocal.filter(p => !p.replies || p.replies.length === 0).length;
+      document.getElementById('countAll').textContent = allLocal.length;
+      document.getElementById('countWaiting').textContent = waiting;
+      document.getElementById('countCompleted').textContent = allLocal.length - waiting;
+    }
 
-    const countAllEl = document.getElementById('countAll');
-    const countWaitingEl = document.getElementById('countWaiting');
-    const countCompletedEl = document.getElementById('countCompleted');
-
-    if (countAllEl) countAllEl.textContent = totalCount;
-    if (countWaitingEl) countWaitingEl.textContent = waitingCount;
-    if (countCompletedEl) countCompletedEl.textContent = completedCount;
-
-    // Render table
     tableBody.innerHTML = '';
     const emptyState = document.getElementById('emptyState');
 
-    if (filtered.length === 0) {
+    if (!posts || posts.length === 0) {
       if (emptyState) emptyState.style.display = 'block';
       return;
     }
     if (emptyState) emptyState.style.display = 'none';
 
-    filtered.forEach((post, index) => {
-      const isCompleted = post.replies && post.replies.length > 0;
+    posts.forEach(post => {
+      const replyCount = post.reply_count || (post.replies ? post.replies.length : 0);
+      const isCompleted = replyCount > 0;
+      const isSecret = Boolean(post.is_secret || post.isSecret);
       const row = document.createElement('tr');
-      row.onclick = () => onRowClick(post.id);
+      row.onclick = () => onRowClick(post);
 
       row.innerHTML = `
         <td class="col-num table-num">${post.id}</td>
@@ -289,28 +297,25 @@ function initBoardPage() {
         </td>
         <td class="col-title">
           <div class="post-row-title">
-            ${post.isSecret ? '<span class="badge-secret">🔒</span>' : ''}
+            ${isSecret ? '<span class="badge-secret">🔒</span>' : ''}
             <span>${escapeHtml(post.title)}</span>
-            ${isCompleted ? `<span class="reply-count-badge">+${post.replies.length}</span>` : ''}
+            ${replyCount > 0 ? `<span class="reply-count-badge">+${replyCount}</span>` : ''}
           </div>
         </td>
         <td class="col-author">${escapeHtml(post.author)}</td>
-        <td class="col-date">${post.createdAt.split(' ')[0]}</td>
+        <td class="col-date">${(post.created_at || post.createdAt || '').split(' ')[0]}</td>
         <td class="col-views">${post.views || 0}</td>
       `;
       tableBody.appendChild(row);
     });
   }
 
-  // Row Click Handler (Secret check)
-  function onRowClick(postId) {
-    const posts = getStoredPosts();
-    const post = posts.find(p => p.id === postId);
-    if (!post) return;
+  // Row Click Handler
+  function onRowClick(post) {
+    const isSecret = Boolean(post.is_secret || post.isSecret);
 
-    // If secret and user is NOT admin
-    if (post.isSecret && !isAdminLoggedIn()) {
-      pendingSecretPostId = postId;
+    if (isSecret && !isAdminLoggedIn()) {
+      pendingSecretPost = post;
       secretPwInput.value = '';
       if (secretErrorMsg) secretErrorMsg.style.display = 'none';
       secretAuthModal.classList.add('open');
@@ -318,21 +323,31 @@ function initBoardPage() {
       return;
     }
 
-    openDetailModal(post);
+    fetchAndOpenDetail(post.id);
   }
 
   // Confirm Secret Password
   if (confirmSecretBtn) {
-    confirmSecretBtn.onclick = () => {
-      const posts = getStoredPosts();
-      const post = posts.find(p => p.id === pendingSecretPostId);
-      if (!post) return;
+    confirmSecretBtn.onclick = async () => {
+      const pw = secretPwInput.value.trim();
+      if (!pw || !pendingSecretPost) return;
 
-      if (secretPwInput.value === post.password) {
+      const res = await fetchAPI(`/api/posts/${pendingSecretPost.id}/verify`, {
+        method: 'POST',
+        body: JSON.stringify({ password: pw })
+      });
+
+      if (res.ok && res.data.verified) {
         secretAuthModal.classList.remove('open');
-        openDetailModal(post);
+        fetchAndOpenDetail(pendingSecretPost.id);
       } else {
-        if (secretErrorMsg) secretErrorMsg.style.display = 'block';
+        // Fallback check
+        if (pendingSecretPost.password && pendingSecretPost.password === pw) {
+          secretAuthModal.classList.remove('open');
+          openDetailModalDirect(pendingSecretPost, pendingSecretPost.replies || []);
+        } else {
+          if (secretErrorMsg) secretErrorMsg.style.display = 'block';
+        }
       }
     };
   }
@@ -340,32 +355,43 @@ function initBoardPage() {
   if (cancelSecretBtn) cancelSecretBtn.onclick = () => secretAuthModal.classList.remove('open');
   if (closeSecretBtn) closeSecretBtn.onclick = () => secretAuthModal.classList.remove('open');
 
-  // Open Detail Modal
-  function openDetailModal(post) {
-    activeViewingPostId = post.id;
+  // Fetch Post Detail from Worker API
+  async function fetchAndOpenDetail(postId) {
+    activeViewingPostId = postId;
+    const res = await fetchAPI(`/api/posts/${postId}`);
 
-    // Increment Views
-    post.views = (post.views || 0) + 1;
-    saveStoredPosts(getStoredPosts().map(p => p.id === post.id ? post : p));
-    renderBoard();
+    if (res.ok && res.data.post) {
+      openDetailModalDirect(res.data.post, res.data.replies || []);
+      renderBoard(); // Update views count in list
+    } else {
+      // Local fallback
+      const posts = getStoredPosts();
+      const post = posts.find(p => p.id === postId);
+      if (post) {
+        post.views = (post.views || 0) + 1;
+        saveStoredPosts(posts);
+        openDetailModalDirect(post, post.replies || []);
+        renderBoard();
+      }
+    }
+  }
 
-    // Fill Modal
+  function openDetailModalDirect(post, replies) {
     document.getElementById('detailCategory').textContent = post.category || '일반';
-    const isCompleted = post.replies && post.replies.length > 0;
+    const isCompleted = replies.length > 0;
     const statusEl = document.getElementById('detailStatus');
     statusEl.textContent = isCompleted ? '답변 완료' : '답변 대기';
     statusEl.className = `badge-status ${isCompleted ? 'completed' : 'waiting'}`;
 
     const secretEl = document.getElementById('detailSecretBadge');
-    if (secretEl) secretEl.style.display = post.isSecret ? 'inline-flex' : 'none';
+    if (secretEl) secretEl.style.display = (post.is_secret || post.isSecret) ? 'inline-flex' : 'none';
 
     document.getElementById('detailTitle').textContent = post.title;
     document.getElementById('detailAuthor').textContent = post.author;
-    document.getElementById('detailDate').textContent = post.createdAt;
-    document.getElementById('detailViews').textContent = post.views;
+    document.getElementById('detailDate').textContent = post.created_at || post.createdAt;
+    document.getElementById('detailViews').textContent = post.views || 1;
     document.getElementById('detailContent').textContent = post.content;
 
-    // Admin Reply Box & Delete Permissions
     if (isAdminLoggedIn()) {
       if (adminReplyBox) adminReplyBox.style.display = 'block';
       if (guestReplyNotice) guestReplyNotice.style.display = 'none';
@@ -376,17 +402,15 @@ function initBoardPage() {
       if (adminDeleteArea) adminDeleteArea.style.display = 'none';
     }
 
-    renderReplies(post);
+    renderReplies(replies);
     detailModal.classList.add('open');
   }
 
-  // Render Replies inside Detail Modal
-  function renderReplies(post) {
+  function renderReplies(replies) {
     const list = document.getElementById('repliesList');
     const countEl = document.getElementById('replyCount');
     if (!list) return;
 
-    const replies = post.replies || [];
     if (countEl) countEl.textContent = replies.length;
     list.innerHTML = '';
 
@@ -403,26 +427,21 @@ function initBoardPage() {
           <div class="reply-author-info">
             <span class="badge-admin">공식 답변</span>
             <span class="reply-author">${escapeHtml(reply.author)}</span>
-            <span class="reply-date">${reply.createdAt}</span>
+            <span class="reply-date">${reply.created_at || reply.createdAt}</span>
           </div>
           ${isAdminLoggedIn() ? `<button class="reply-delete-btn" data-reply-id="${reply.id}">답변 삭제</button>` : ''}
         </div>
         <div class="reply-body">${escapeHtml(reply.content)}</div>
       `;
 
-      // Reply delete handler
       const delBtn = item.querySelector('.reply-delete-btn');
       if (delBtn) {
-        delBtn.onclick = () => {
+        delBtn.onclick = async () => {
           if (!confirm('이 관리자 답변을 삭제하시겠습니까?')) return;
-          const posts = getStoredPosts();
-          const target = posts.find(p => p.id === activeViewingPostId);
-          if (target) {
-            target.replies = target.replies.filter(r => r.id !== reply.id);
-            saveStoredPosts(posts);
-            renderReplies(target);
-            renderBoard();
+          const delRes = await fetchAPI(`/api/replies/${reply.id}`, { method: 'DELETE' });
+          if (delRes.ok) {
             showToast('답변이 삭제되었습니다.');
+            fetchAndOpenDetail(activeViewingPostId);
           }
         };
       }
@@ -433,82 +452,72 @@ function initBoardPage() {
 
   // Admin Reply Submit
   if (adminReplyForm) {
-    adminReplyForm.onsubmit = (e) => {
+    adminReplyForm.onsubmit = async (e) => {
       e.preventDefault();
       const contentEl = document.getElementById('adminReplyContent');
       const content = contentEl.value.trim();
-      if (!content) return;
+      if (!content || !activeViewingPostId) return;
 
-      const posts = getStoredPosts();
-      const post = posts.find(p => p.id === activeViewingPostId);
-      if (!post) return;
-
-      if (!post.replies) post.replies = [];
-      post.replies.push({
-        id: Date.now(),
-        author: '넥스트웨이브 솔루션즈 (고객지원팀)',
-        content: content,
-        createdAt: formatDate()
+      const res = await fetchAPI(`/api/posts/${activeViewingPostId}/replies`, {
+        method: 'POST',
+        body: JSON.stringify({
+          content,
+          author: '넥스트웨이브 솔루션즈 (고객지원팀)'
+        })
       });
 
-      saveStoredPosts(posts);
-      contentEl.value = '';
-      renderReplies(post);
-      renderBoard();
-
-      // Update status badge
-      const statusEl = document.getElementById('detailStatus');
-      if (statusEl) {
-        statusEl.textContent = '답변 완료';
-        statusEl.className = 'badge-status completed';
+      if (res.ok) {
+        contentEl.value = '';
+        fetchAndOpenDetail(activeViewingPostId);
+        showToast('공식 답변이 성공적으로 등록되었습니다.');
+      } else {
+        showToast('답변 등록에 실패했습니다: ' + (res.data?.error || ''), '오류', true);
       }
-
-      showToast('공식 답변이 성공적으로 등록되었습니다.');
     };
   }
 
-  // Non-member delete post with password
+  // Non-member delete
   if (userDeleteBtn) {
-    userDeleteBtn.onclick = () => {
+    userDeleteBtn.onclick = async () => {
       const pwInput = document.getElementById('deletePasswordInput');
       const pw = pwInput.value.trim();
       if (!pw) {
-        alert('글 작성 시 입력하셨던 비밀번호를 입력해주세요.');
-        pwInput.focus();
+        alert('비밀번호를 입력해주세요.');
         return;
       }
 
-      const posts = getStoredPosts();
-      const post = posts.find(p => p.id === activeViewingPostId);
-      if (!post) return;
+      const res = await fetchAPI(`/api/posts/${activeViewingPostId}`, {
+        method: 'DELETE',
+        body: JSON.stringify({ password: pw })
+      });
 
-      if (post.password === pw) {
-        if (!confirm('정말 이 문의글을 삭제하시겠습니까?')) return;
-        saveStoredPosts(posts.filter(p => p.id !== activeViewingPostId));
+      if (res.ok) {
         detailModal.classList.remove('open');
         pwInput.value = '';
         renderBoard();
         showToast('게시글이 정상적으로 삭제되었습니다.');
       } else {
-        alert('비밀번호가 일치하지 않습니다.');
+        alert(res.data?.error || '비밀번호가 일치하지 않습니다.');
       }
     };
   }
 
   // Admin Instant Delete
   if (adminDeleteBtn) {
-    adminDeleteBtn.onclick = () => {
+    adminDeleteBtn.onclick = async () => {
       if (!confirm('관리자 권한으로 이 게시글을 완전히 삭제하시겠습니까?')) return;
-      saveStoredPosts(getStoredPosts().filter(p => p.id !== activeViewingPostId));
-      detailModal.classList.remove('open');
-      renderBoard();
-      showToast('관리자 권한으로 문의글이 삭제되었습니다.');
+      const res = await fetchAPI(`/api/posts/${activeViewingPostId}`, { method: 'DELETE' });
+      if (res.ok) {
+        detailModal.classList.remove('open');
+        renderBoard();
+        showToast('관리자 권한으로 문의글이 삭제되었습니다.');
+      }
     };
   }
 
-  // Create New Post Submit
+  // Create Post Submit
   if (writeForm) {
-    writeForm.onsubmit = (e) => {
+    writeForm.onsubmit = async (e) => {
       e.preventDefault();
       const author = document.getElementById('postAuthor').value.trim();
       const password = document.getElementById('postPassword').value.trim();
@@ -523,30 +532,27 @@ function initBoardPage() {
         return;
       }
 
-      const posts = getStoredPosts();
-      const newId = posts.length > 0 ? Math.max(...posts.map(p => p.id)) + 1 : 1;
+      const res = await fetchAPI('/api/posts', {
+        method: 'POST',
+        body: JSON.stringify({
+          title,
+          content,
+          author,
+          password,
+          category,
+          email,
+          is_secret: isSecret
+        })
+      });
 
-      const newPost = {
-        id: newId,
-        title,
-        content,
-        author,
-        password,
-        email,
-        category,
-        isSecret,
-        views: 0,
-        createdAt: formatDate(),
-        replies: []
-      };
-
-      posts.unshift(newPost);
-      saveStoredPosts(posts);
-
-      writeForm.reset();
-      writeModal.classList.remove('open');
-      renderBoard();
-      showToast('문의글이 등록되었습니다. 신속하게 답변드리겠습니다.');
+      if (res.ok) {
+        writeForm.reset();
+        writeModal.classList.remove('open');
+        renderBoard();
+        showToast('Cloudflare D1에 문의글이 안전하게 등록되었습니다.');
+      } else {
+        showToast('등록 실패: ' + (res.data?.error || ''), '오류', true);
+      }
     };
   }
 
@@ -558,7 +564,6 @@ function initBoardPage() {
   if (closeDetailBtn) closeDetailBtn.onclick = () => detailModal.classList.remove('open');
   if (closeDetailBtnFooter) closeDetailBtnFooter.onclick = () => detailModal.classList.remove('open');
 
-  // Filter Buttons
   filterBtns.forEach(btn => {
     btn.onclick = () => {
       filterBtns.forEach(b => b.classList.remove('active'));
@@ -568,7 +573,6 @@ function initBoardPage() {
     };
   });
 
-  // Search Input
   if (searchInput) {
     searchInput.oninput = (e) => {
       searchQuery = e.target.value.trim();
@@ -576,18 +580,17 @@ function initBoardPage() {
     };
   }
 
-  // Initial Load
   updateAdminHeaderStatus();
   renderBoard();
 }
 
 /* ==========================================================================
-   Page Specific Handlers: admin.html
+   Page: admin.html
    ========================================================================== */
 function initAdminPage() {
   const loginSection = document.getElementById('loginSection');
   const dashboardSection = document.getElementById('dashboardSection');
-  if (!loginSection || !dashboardSection) return; // Not on admin.html
+  if (!loginSection || !dashboardSection) return;
 
   const loginForm = document.getElementById('adminLoginForm');
   const adminIdInput = document.getElementById('adminId');
@@ -596,7 +599,6 @@ function initAdminPage() {
   const loginErrorMsg = document.getElementById('loginErrorMsg');
   const logoutBtn = document.getElementById('logoutBtn');
 
-  // Admin Modal Elements
   const adminModal = document.getElementById('adminDetailModal');
   const closeAdminModal = document.getElementById('closeAdminDetailModal');
   const admCloseBtn = document.getElementById('admCloseBtn');
@@ -607,7 +609,6 @@ function initAdminPage() {
   let currentTab = 'all';
   let adminSearch = '';
 
-  // Auto Fill Test Account
   if (autoFillBtn) {
     autoFillBtn.onclick = () => {
       adminIdInput.value = 'admin';
@@ -616,7 +617,6 @@ function initAdminPage() {
     };
   }
 
-  // Check login state on load
   function checkAuthState() {
     if (isAdminLoggedIn()) {
       loginSection.style.display = 'none';
@@ -628,26 +628,32 @@ function initAdminPage() {
     }
   }
 
-  // Handle Login
+  // Handle Login via Worker D1
   if (loginForm) {
-    loginForm.onsubmit = (e) => {
+    loginForm.onsubmit = async (e) => {
       e.preventDefault();
       const id = adminIdInput.value.trim();
       const pw = adminPwInput.value.trim();
 
-      // Demo Admin Credentials: admin / admin1234
-      if (id === 'admin' && pw === 'admin1234') {
+      const res = await fetchAPI('/api/admin/login', {
+        method: 'POST',
+        body: JSON.stringify({ username: id, password: pw })
+      });
+
+      if (res.ok && res.data.success) {
         setAdminLoggedIn(true);
         if (loginErrorMsg) loginErrorMsg.style.display = 'none';
         showToast('관리자 인증에 성공했습니다.');
         checkAuthState();
       } else {
-        if (loginErrorMsg) loginErrorMsg.style.display = 'block';
+        if (loginErrorMsg) {
+          loginErrorMsg.textContent = res.data?.error || '아이디 또는 비밀번호가 올바르지 않습니다.';
+          loginErrorMsg.style.display = 'block';
+        }
       }
     };
   }
 
-  // Handle Logout
   if (logoutBtn) {
     logoutBtn.onclick = () => {
       setAdminLoggedIn(false);
@@ -656,41 +662,32 @@ function initAdminPage() {
     };
   }
 
-  // Render Admin Dashboard
-  function renderAdminDashboard() {
-    const posts = getStoredPosts();
-    const totalCount = posts.length;
-    const waitingCount = posts.filter(p => !p.replies || p.replies.length === 0).length;
-    const completedCount = totalCount - waitingCount;
+  async function renderAdminDashboard() {
+    // Stats
+    const statsRes = await fetchAPI('/api/stats');
+    if (statsRes.ok) {
+      document.getElementById('dashTotalCount').textContent = statsRes.data.total;
+      document.getElementById('dashWaitingCount').textContent = statsRes.data.waiting;
+      document.getElementById('dashCompletedCount').textContent = statsRes.data.completed;
+    }
 
-    document.getElementById('dashTotalCount').textContent = totalCount;
-    document.getElementById('dashWaitingCount').textContent = waitingCount;
-    document.getElementById('dashCompletedCount').textContent = completedCount;
-
-    // Filter
-    let filtered = posts.filter(p => {
-      const hasReplies = p.replies && p.replies.length > 0;
-      if (currentTab === 'waiting' && hasReplies) return false;
-      if (currentTab === 'completed' && !hasReplies) return false;
-      if (adminSearch) {
-        const q = adminSearch.toLowerCase();
-        return p.title.toLowerCase().includes(q) || p.author.toLowerCase().includes(q);
-      }
-      return true;
-    });
+    // Posts
+    const postsRes = await fetchAPI(`/api/posts?filter=${currentTab}&search=${encodeURIComponent(adminSearch)}`);
+    const posts = (postsRes.ok && postsRes.data.posts) ? postsRes.data.posts : [];
 
     const tbody = document.getElementById('adminTableBody');
     const emptyMsg = document.getElementById('adminEmptyMsg');
     tbody.innerHTML = '';
 
-    if (filtered.length === 0) {
+    if (posts.length === 0) {
       if (emptyMsg) emptyMsg.style.display = 'block';
       return;
     }
     if (emptyMsg) emptyMsg.style.display = 'none';
 
-    filtered.forEach(post => {
-      const isCompleted = post.replies && post.replies.length > 0;
+    posts.forEach(post => {
+      const isCompleted = (post.reply_count || 0) > 0;
+      const isSecret = Boolean(post.is_secret);
       const tr = document.createElement('tr');
       tr.innerHTML = `
         <td class="col-num table-num">${post.id}</td>
@@ -702,12 +699,12 @@ function initAdminPage() {
         <td><span class="badge-category">${post.category || '일반'}</span></td>
         <td>
           <div class="post-row-title">
-            ${post.isSecret ? '<span class="badge-secret">🔒</span>' : ''}
+            ${isSecret ? '<span class="badge-secret">🔒</span>' : ''}
             <strong>${escapeHtml(post.title)}</strong>
           </div>
         </td>
         <td>${escapeHtml(post.author)}</td>
-        <td class="col-date">${post.createdAt.split(' ')[0]}</td>
+        <td class="col-date">${(post.created_at || '').split(' ')[0]}</td>
         <td>
           <button class="btn btn-sm ${isCompleted ? 'btn-secondary' : 'btn-primary'} open-reply-btn">
             ${isCompleted ? '답변 관리' : '답변 작성하기'}
@@ -715,37 +712,41 @@ function initAdminPage() {
         </td>
       `;
 
-      tr.querySelector('.open-reply-btn').onclick = () => openAdminModal(post);
+      tr.querySelector('.open-reply-btn').onclick = () => openAdminModal(post.id);
       tbody.appendChild(tr);
     });
   }
 
-  // Open Admin Reply Modal
-  function openAdminModal(post) {
-    activeAdminPostId = post.id;
+  async function openAdminModal(postId) {
+    activeAdminPostId = postId;
+    const res = await fetchAPI(`/api/posts/${postId}`);
+    if (!res.ok || !res.data.post) return;
+
+    const post = res.data.post;
+    const replies = res.data.replies || [];
+
     document.getElementById('admCategory').textContent = post.category || '일반';
-    const isCompleted = post.replies && post.replies.length > 0;
+    const isCompleted = replies.length > 0;
     const statusEl = document.getElementById('admStatus');
     statusEl.textContent = isCompleted ? '답변 완료' : '답변 대기';
     statusEl.className = `badge-status ${isCompleted ? 'completed' : 'waiting'}`;
 
     const secretBadge = document.getElementById('admSecret');
-    if (secretBadge) secretBadge.style.display = post.isSecret ? 'inline-block' : 'none';
+    if (secretBadge) secretBadge.style.display = post.is_secret ? 'inline-block' : 'none';
 
     document.getElementById('admTitle').textContent = post.title;
     document.getElementById('admAuthor').textContent = post.author;
     document.getElementById('admEmail').textContent = post.email || '(이메일 미입력)';
-    document.getElementById('admDate').textContent = post.createdAt;
+    document.getElementById('admDate').textContent = post.created_at;
     document.getElementById('admContent').textContent = post.content;
 
-    renderAdminExistingReplies(post);
+    renderAdminExistingReplies(replies);
     adminModal.classList.add('open');
   }
 
-  function renderAdminExistingReplies(post) {
+  function renderAdminExistingReplies(replies) {
     const list = document.getElementById('admExistingReplies');
     list.innerHTML = '';
-    const replies = post.replies || [];
 
     if (replies.length === 0) {
       list.innerHTML = '<p style="color: var(--text-muted); font-size: 0.88rem; margin-bottom: 16px;">아직 작성된 공식 답변이 없습니다.</p>';
@@ -761,21 +762,18 @@ function initAdminPage() {
           <div class="reply-author-info">
             <span class="badge-admin">등록된 답변</span>
             <span class="reply-author">${escapeHtml(reply.author)}</span>
-            <span class="reply-date">${reply.createdAt}</span>
+            <span class="reply-date">${reply.created_at}</span>
           </div>
           <button class="reply-delete-btn" data-adm-del="${reply.id}">삭제</button>
         </div>
         <div class="reply-body">${escapeHtml(reply.content)}</div>
       `;
 
-      item.querySelector('.reply-delete-btn').onclick = () => {
+      item.querySelector('.reply-delete-btn').onclick = async () => {
         if (!confirm('이 답변을 삭제하시겠습니까?')) return;
-        const posts = getStoredPosts();
-        const cur = posts.find(p => p.id === activeAdminPostId);
-        if (cur) {
-          cur.replies = cur.replies.filter(r => r.id !== reply.id);
-          saveStoredPosts(posts);
-          renderAdminExistingReplies(cur);
+        const res = await fetchAPI(`/api/replies/${reply.id}`, { method: 'DELETE' });
+        if (res.ok) {
+          openAdminModal(activeAdminPostId);
           renderAdminDashboard();
           showToast('답변이 삭제되었습니다.');
         }
@@ -785,57 +783,45 @@ function initAdminPage() {
     });
   }
 
-  // Admin Reply Submit
   if (admReplyForm) {
-    admReplyForm.onsubmit = (e) => {
+    admReplyForm.onsubmit = async (e) => {
       e.preventDefault();
       const txt = document.getElementById('admReplyText');
       const val = txt.value.trim();
-      if (!val) return;
+      if (!val || !activeAdminPostId) return;
 
-      const posts = getStoredPosts();
-      const post = posts.find(p => p.id === activeAdminPostId);
-      if (!post) return;
-
-      if (!post.replies) post.replies = [];
-      post.replies.push({
-        id: Date.now(),
-        author: '넥스트웨이브 솔루션즈 (고객지원팀)',
-        content: val,
-        createdAt: formatDate()
+      const res = await fetchAPI(`/api/posts/${activeAdminPostId}/replies`, {
+        method: 'POST',
+        body: JSON.stringify({
+          content: val,
+          author: '넥스트웨이브 솔루션즈 (고객지원팀)'
+        })
       });
 
-      saveStoredPosts(posts);
-      txt.value = '';
-      renderAdminExistingReplies(post);
-      renderAdminDashboard();
-
-      const statusEl = document.getElementById('admStatus');
-      if (statusEl) {
-        statusEl.textContent = '답변 완료';
-        statusEl.className = 'badge-status completed';
+      if (res.ok) {
+        txt.value = '';
+        openAdminModal(activeAdminPostId);
+        renderAdminDashboard();
+        showToast('공식 답변이 Cloudflare D1에 등록되었습니다.');
       }
-
-      showToast('공식 답변이 등록되었습니다.');
     };
   }
 
-  // Admin Delete Post
   if (admDeletePostBtn) {
-    admDeletePostBtn.onclick = () => {
-      if (!confirm('이 문의글을 완전히 삭제하시겠습니까? (복구할 수 없습니다)')) return;
-      saveStoredPosts(getStoredPosts().filter(p => p.id !== activeAdminPostId));
-      adminModal.classList.remove('open');
-      renderAdminDashboard();
-      showToast('게시글이 삭제되었습니다.');
+    admDeletePostBtn.onclick = async () => {
+      if (!confirm('이 문의글을 완전히 삭제하시겠습니까? (D1에서 영구 제거됩니다)')) return;
+      const res = await fetchAPI(`/api/posts/${activeAdminPostId}`, { method: 'DELETE' });
+      if (res.ok) {
+        adminModal.classList.remove('open');
+        renderAdminDashboard();
+        showToast('게시글이 삭제되었습니다.');
+      }
     };
   }
 
-  // Modal Closures
   if (closeAdminModal) closeAdminModal.onclick = () => adminModal.classList.remove('open');
   if (admCloseBtn) admCloseBtn.onclick = () => adminModal.classList.remove('open');
 
-  // Filter tabs
   document.querySelectorAll('.tab-btn').forEach(btn => {
     btn.onclick = () => {
       document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -845,7 +831,6 @@ function initAdminPage() {
     };
   });
 
-  // Admin Search
   const searchEl = document.getElementById('adminSearchInput');
   if (searchEl) {
     searchEl.oninput = (e) => {
@@ -857,7 +842,6 @@ function initAdminPage() {
   checkAuthState();
 }
 
-// Utility: Escape HTML
 function escapeHtml(string) {
   if (!string) return '';
   const div = document.createElement('div');
@@ -865,7 +849,6 @@ function escapeHtml(string) {
   return div.innerHTML;
 }
 
-// Global initialization
 document.addEventListener('DOMContentLoaded', () => {
   initThemeToggle();
   initBoardPage();

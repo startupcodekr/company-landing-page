@@ -6,5 +6,5 @@ pages_build_output_dir = "."
 [[d1_databases]]
 binding = "DB"
 database_name = "company_inquiry_db"
-database_id = "local-d1-company-inquiry-db"
+database_id = "367ef878-6567-440b-bd03-d4613d4909d8"
 migrations_dir = "migrations"

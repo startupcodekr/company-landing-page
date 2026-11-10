@@ -1,0 +1,8 @@
+name = "company-inquiry-api"
+main = "src/index.js"
+compatibility_date = "2024-11-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "company_inquiry_db"
+database_id = "367ef878-6567-440b-bd03-d4613d4909d8"
