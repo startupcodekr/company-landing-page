@@ -218,6 +218,9 @@ function initThemeToggle() {
       const next = current === 'dark' ? 'light' : 'dark';
       document.body.setAttribute('data-theme', next);
       localStorage.setItem('nw_theme', next);
+      if (typeof window.gtag === 'function') {
+        window.gtag('event', 'theme_change', { theme: next });
+      }
     });
   }
 }
@@ -473,6 +476,14 @@ function initBoardPage() {
   }
 
   function openDetailModalDirect(post, replies) {
+    if (typeof window.gtag === 'function') {
+      window.gtag('event', 'view_item', {
+        item_id: String(post.id),
+        item_name: post.title || '문의글',
+        content_type: 'inquiry'
+      });
+    }
+
     document.getElementById('detailCategory').textContent = post.category || '일반';
     const isCompleted = replies.length > 0;
     const statusEl = document.getElementById('detailStatus');
@@ -663,6 +674,14 @@ function initBoardPage() {
           writeModal.classList.remove('open');
           loadBoardData(1); // 1페이지로 리프레시
           showToast('Cloudflare D1에 문의글이 안전하게 등록되었습니다.');
+
+          if (typeof window.gtag === 'function') {
+            window.gtag('event', 'generate_lead', {
+              event_category: 'inquiry',
+              event_label: category,
+              is_secret: isSecret
+            });
+          }
         } else {
           showToast('등록 실패: ' + (res.data?.error || ''), '오류', true);
         }

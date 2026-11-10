@@ -30,6 +30,7 @@ function initTheme() {
       const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
       document.body.setAttribute('data-theme', newTheme);
       localStorage.setItem('nw_theme', newTheme);
+      trackGAEvent('theme_change', { theme: newTheme });
     });
   }
 }
@@ -307,6 +308,7 @@ function initContactForm() {
 
       // Show toast
       showToast();
+      trackGAEvent('generate_lead', { method: 'landing_contact_form' });
     }, 1200);
   });
 
@@ -318,3 +320,34 @@ function initContactForm() {
     }, 4500);
   }
 }
+
+/* ==========================================================================
+   7. Google Analytics 4 Event Tracker Helper
+   ========================================================================== */
+function trackGAEvent(eventName, params = {}) {
+  try {
+    if (typeof window.gtag === 'function') {
+      window.gtag('event', eventName, params);
+      console.log(`[GA4 Event] ${eventName}:`, params);
+    }
+  } catch (err) {
+    console.debug('GA tracking error:', err);
+  }
+}
+
+// Track CTA and Outbound / Board link clicks
+document.addEventListener('click', (e) => {
+  const target = e.target.closest('a, button');
+  if (!target) return;
+
+  const text = (target.innerText || target.getAttribute('aria-label') || '').trim();
+  const href = target.getAttribute('href');
+
+  if (target.classList.contains('btn') || target.classList.contains('hero-cta') || (href && href.includes('board'))) {
+    trackGAEvent('cta_click', {
+      button_text: text.slice(0, 50),
+      target_url: href || 'action',
+      page_location: window.location.pathname
+    });
+  }
+});
