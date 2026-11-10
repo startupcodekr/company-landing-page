@@ -7,9 +7,14 @@
   <meta name="description" content="넥스트웨이브 비즈니스 솔루션 문의 게시판입니다. 비회원도 자유롭게 문의글을 남기실 수 있습니다.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Pretendard:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Pretendard:wght@300;400;500;600;700&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Pretendard:wght@300;400;500;600;700&display=swap" media="print" onload="this.media='all'">
+  <noscript>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Pretendard:wght@300;400;500;600;700&display=swap">
+  </noscript>
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="board.css">
+  <script src="board.js" defer></script>
 </head>
 <body data-theme="dark">
   <!-- 네비게이션 바 -->
@@ -384,7 +389,5 @@
       </div>
     </div>
   </footer>
-
-  <script src="board.js"></script>
 </body>
 </html>
