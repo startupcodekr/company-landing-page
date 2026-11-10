@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>관리자 콘솔 | NextWave Solutions</title>
+  <meta name="description" content="넥스트웨이브 고객 문의 관리자 콘솔입니다.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Pretendard:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="board.css">
+</head>
+<body data-theme="dark">
+  <!-- 네비게이션 바 -->
+  <header class="navbar" id="navbar">
+    <div class="container nav-container">
+      <a href="index.html" class="brand-logo">
+        <svg class="logo-icon" viewBox="0 0 32 32" fill="none">
+          <path d="M4 22L14 6L20 16L28 4" stroke="url(#logo-grad)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="28" cy="4" r="3" fill="#6366F1"/>
+          <defs>
+            <linearGradient id="logo-grad" x1="4" y1="22" x2="28" y2="4" gradientUnits="userSpaceOnUse">
+              <stop stop-color="#38BDF8"/>
+              <stop offset="1" stop-color="#6366F1"/>
+            </linearGradient>
+          </defs>
+        </svg>
+        <span>NextWave <small class="admin-brand-tag">ADMIN</small></span>
+      </a>
+
+      <nav class="nav-menu">
+        <ul class="nav-links">
+          <li><a href="index.html" class="nav-link">회사 홈페이지</a></li>
+          <li><a href="board.html" class="nav-link">문의 게시판 이동</a></li>
+        </ul>
+      </nav>
+
+      <div class="nav-actions">
+        <button class="theme-toggle" id="themeToggle" aria-label="테마 전환" title="다크/라이트 모드 전환">
+          <svg class="sun-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="5"></circle>
+            <path d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72l1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+          </svg>
+          <svg class="moon-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"></path>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="admin-main">
+    <div class="container">
+      <!-- 1. 비로그인 상태일 때: 로그인 박스 -->
+      <section id="loginSection" class="admin-login-section">
+        <div class="login-card">
+          <div class="login-header">
+            <div class="login-badge">SECURITY PORTAL</div>
+            <h2>NextWave 관리자 로그인</h2>
+            <p>고객 문의글 열람 및 공식 답변 작성을 위해 관리자 계정으로 로그인해 주세요.</p>
+          </div>
+
+          <form id="adminLoginForm" novalidate>
+            <div class="form-group">
+              <label for="adminId">관리자 아이디</label>
+              <input type="text" id="adminId" placeholder="아이디 입력 (admin)" required autocomplete="username">
+            </div>
+
+            <div class="form-group">
+              <label for="adminPw">비밀번호</label>
+              <input type="password" id="adminPw" placeholder="비밀번호 입력 (admin1234)" required autocomplete="current-password">
+            </div>
+
+            <div class="test-account-tip">
+              💡 <strong>테스트 관리자 계정</strong>: <code>admin</code> / <code>admin1234</code>
+              <button type="button" class="btn-fill-account" id="autoFillAccount">자동 입력</button>
+            </div>
+
+            <div id="loginErrorMsg" class="error-banner" style="display: none;">
+              아이디 또는 비밀번호가 올바르지 않습니다.
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-block">관리자 콘솔 접속</button>
+          </form>
+        </div>
+      </section>
+
+      <!-- 2. 로그인 완료 상태일 때: 관리자 대시보드 -->
+      <section id="dashboardSection" class="admin-dashboard-section" style="display: none;">
+        <div class="dashboard-header-bar">
+          <div>
+            <span class="sub-title">MANAGEMENT CONSOLE</span>
+            <h1 class="dashboard-title">고객 문의 및 답변 관리</h1>
+          </div>
+          <div class="dashboard-actions">
+            <a href="board.html" class="btn btn-secondary">게시판 보기</a>
+            <button id="logoutBtn" class="btn btn-danger">로그아웃</button>
+          </div>
+        </div>
+
+        <!-- 요약 통계 카드 -->
+        <div class="stats-overview-grid">
+          <div class="admin-stat-card">
+            <span class="stat-card-label">전체 접수 문의</span>
+            <span class="stat-card-value" id="dashTotalCount">0</span>
+            <span class="stat-card-sub">누적 고객 문의 건수</span>
+          </div>
+          <div class="admin-stat-card warning">
+            <span class="stat-card-label">답변 대기 중</span>
+            <span class="stat-card-value" id="dashWaitingCount">0</span>
+            <span class="stat-card-sub">신속한 응답이 필요한 문의</span>
+          </div>
+          <div class="admin-stat-card success">
+            <span class="stat-card-label">답변 완료</span>
+            <span class="stat-card-value" id="dashCompletedCount">0</span>
+            <span class="stat-card-sub">관리자 댓글 작성 완료</span>
+          </div>
+        </div>
+
+        <!-- 문의 관리 테이블 -->
+        <div class="admin-table-container">
+          <div class="table-control-row">
+            <div class="table-filter-tabs">
+              <button class="tab-btn active" data-tab="all">전체 목록</button>
+              <button class="tab-btn" data-tab="waiting">대기 중만 보기</button>
+              <button class="tab-btn" data-tab="completed">완료 건 보기</button>
+            </div>
+            <div class="search-mini">
+              <input type="text" id="adminSearchInput" placeholder="제목/작성자 검색...">
+            </div>
+          </div>
+
+          <table class="board-table admin-table">
+            <thead>
+              <tr>
+                <th>번호</th>
+                <th>상태</th>
+                <th>유형</th>
+                <th>제목</th>
+                <th>작성자</th>
+                <th>작성일</th>
+                <th>답변 관리</th>
+              </tr>
+            </thead>
+            <tbody id="adminTableBody">
+              <!-- JavaScript 렌더링 -->
+            </tbody>
+          </table>
+
+          <div id="adminEmptyMsg" class="empty-state" style="display: none;">
+            <p>조회된 문의 내역이 없습니다.</p>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <!-- 관리자 답변 작성 전용 모달 -->
+  <div class="modal-overlay" id="adminDetailModal">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-header">
+        <div class="detail-header-left">
+          <span id="admCategory" class="badge-category">기술 솔루션</span>
+          <span id="admStatus" class="badge-status">답변 대기</span>
+          <span id="admSecret" class="badge-secret" style="display: none;">🔒 비밀글</span>
+        </div>
+        <button class="modal-close" id="closeAdminDetailModal">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <h2 id="admTitle" class="detail-post-title">문의 제목</h2>
+        
+        <div class="detail-meta">
+          <div><span class="meta-label">작성자:</span> <strong id="admAuthor">고객명</strong></div>
+          <div><span class="meta-label">연락 이메일:</span> <span id="admEmail">-</span></div>
+          <div><span class="meta-label">작성일:</span> <span id="admDate">2026-11-10</span></div>
+        </div>
+
+        <div class="detail-content-box">
+          <p id="admContent">문의 내용</p>
+        </div>
+
+        <hr class="detail-divider">
+
+        <!-- 관리자 공식 답변(댓글) 작성 폼 -->
+        <div class="admin-reply-box">
+          <div class="admin-reply-header">
+            <span class="badge-admin">관리자 공식 답변 (댓글)</span>
+            <p>작성하신 답변은 고객 게시판에 즉시 반영되며, 상태가 [답변 완료]로 변경됩니다.</p>
+          </div>
+
+          <div id="admExistingReplies" class="replies-list">
+            <!-- 등록된 답변 목록 -->
+          </div>
+
+          <form id="admReplyForm">
+            <div class="form-group">
+              <label for="admReplyText">신규 답변 작성</label>
+              <textarea id="admReplyText" rows="4" placeholder="고객 문의에 대한 안내 및 기술 가이드를 입력하세요." required></textarea>
+            </div>
+            <div class="admin-reply-actions">
+              <button type="submit" class="btn btn-primary">공식 답변 등록</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-danger btn-sm" id="admDeletePostBtn">게시글 완전 삭제</button>
+        <button type="button" class="btn btn-secondary" id="admCloseBtn">닫기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 토스트 알림창 -->
+  <div class="toast" id="adminToast" role="alert">
+    <div class="toast-icon">✓</div>
+    <div class="toast-body">
+      <strong class="toast-title">알림</strong>
+      <p class="toast-msg">처리되었습니다.</p>
+    </div>
+  </div>
+
+  <script src="board.js"></script>
+</body>
+</html>

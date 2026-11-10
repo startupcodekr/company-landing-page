@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>고객 문의 게시판 | NextWave Solutions</title>
+  <meta name="description" content="넥스트웨이브 비즈니스 솔루션 문의 게시판입니다. 비회원도 자유롭게 문의글을 남기실 수 있습니다.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Pretendard:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="board.css">
+</head>
+<body data-theme="dark">
+  <!-- 네비게이션 바 -->
+  <header class="navbar" id="navbar">
+    <div class="container nav-container">
+      <a href="index.html" class="brand-logo">
+        <svg class="logo-icon" viewBox="0 0 32 32" fill="none">
+          <path d="M4 22L14 6L20 16L28 4" stroke="url(#logo-grad)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="28" cy="4" r="3" fill="#6366F1"/>
+          <defs>
+            <linearGradient id="logo-grad" x1="4" y1="22" x2="28" y2="4" gradientUnits="userSpaceOnUse">
+              <stop stop-color="#38BDF8"/>
+              <stop offset="1" stop-color="#6366F1"/>
+            </linearGradient>
+          </defs>
+        </svg>
+        <span>NextWave</span>
+      </a>
+
+      <nav class="nav-menu" id="navMenu">
+        <ul class="nav-links">
+          <li><a href="index.html" class="nav-link">홈으로</a></li>
+          <li><a href="index.html#about" class="nav-link">회사 소개</a></li>
+          <li><a href="index.html#services" class="nav-link">핵심 솔루션</a></li>
+          <li><a href="board.html" class="nav-link active">문의 게시판</a></li>
+        </ul>
+      </nav>
+
+      <div class="nav-actions">
+        <!-- 관리자 상태 표시 영역 -->
+        <div id="adminStatusArea" class="admin-status-area">
+          <a href="admin.html" class="btn btn-secondary btn-sm admin-btn" id="adminLoginLink">
+            <span>🔐 관리자 로그인</span>
+          </a>
+        </div>
+
+        <button class="theme-toggle" id="themeToggle" aria-label="테마 전환" title="다크/라이트 모드 전환">
+          <svg class="sun-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="5"></circle>
+            <path d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72l1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+          </svg>
+          <svg class="moon-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"></path>
+          </svg>
+        </button>
+
+        <button class="hamburger" id="hamburger" aria-label="메뉴 열기">
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="board-main-container">
+    <div class="container">
+      <!-- 게시판 헤더 -->
+      <section class="board-hero">
+        <div class="badge-pill">
+          <span class="pulse-dot"></span>
+          <span>1:1 비회원 고객 상담 센터</span>
+        </div>
+        <h1 class="board-page-title">무엇이든 편하게 <span class="gradient-text">문의해 주세요</span></h1>
+        <p class="board-page-desc">
+          별도의 회원가입 없이 비회원으로 제목과 내용을 작성하여 문의를 남기실 수 있습니다.<br>
+          접수된 문의는 넥스트웨이브 전문 엔지니어 및 관리자가 신속하게 공식 답변 댓글을 드립니다.
+        </p>
+      </section>
+
+      <!-- 관리자 모드 접속 시 표시되는 안내 배너 -->
+      <div id="adminBanner" class="admin-banner" style="display: none;">
+        <div class="admin-banner-content">
+          <span class="badge-admin">ADMIN MODE</span>
+          <span>현재 <strong>관리자(Administrator)</strong> 권한으로 접속 중입니다. 모든 문의글에 공식 답변(댓글)을 작성하거나 관리할 수 있습니다.</span>
+        </div>
+        <div class="admin-banner-actions">
+          <a href="admin.html" class="btn btn-sm btn-primary">관리자 콘솔 이동</a>
+          <button id="adminQuickLogout" class="btn btn-sm btn-secondary">로그아웃</button>
+        </div>
+      </div>
+
+      <!-- 게시판 툴바 (검색, 필터, 글쓰기 버튼) -->
+      <div class="board-toolbar">
+        <div class="filter-group">
+          <button class="filter-btn active" data-filter="all">전체 문의 (<span id="countAll">0</span>)</button>
+          <button class="filter-btn" data-filter="waiting">답변 대기 (<span id="countWaiting">0</span>)</button>
+          <button class="filter-btn" data-filter="completed">답변 완료 (<span id="countCompleted">0</span>)</button>
+        </div>
+
+        <div class="toolbar-actions">
+          <div class="search-box">
+            <input type="text" id="searchInput" placeholder="제목, 작성자, 내용 검색...">
+            <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+          </div>
+          <button class="btn btn-primary" id="openWriteModalBtn">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 5v14M5 12h14"/>
+            </svg>
+            <span>문의글 작성하기</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 게시판 테이블 목록 -->
+      <div class="board-table-wrapper">
+        <table class="board-table">
+          <thead>
+            <tr>
+              <th class="col-num">번호</th>
+              <th class="col-category">분류</th>
+              <th class="col-status">상태</th>
+              <th class="col-title">제목</th>
+              <th class="col-author">작성자</th>
+              <th class="col-date">작성일</th>
+              <th class="col-views">조회</th>
+            </tr>
+          </thead>
+          <tbody id="boardTableBody">
+            <!-- JavaScript로 동적 렌더링 -->
+          </tbody>
+        </table>
+
+        <!-- 빈 상태 표시 -->
+        <div id="emptyState" class="empty-state" style="display: none;">
+          <div class="empty-icon">📂</div>
+          <h3>등록된 문의글이 없습니다</h3>
+          <p>궁금하신 내용이 있다면 언제든 첫 번째 문의글을 작성해 보세요.</p>
+          <button class="btn btn-primary" id="emptyWriteBtn">새 문의 작성하기</button>
+        </div>
+      </div>
+
+      <!-- 안내 사항 카드 -->
+      <div class="board-notice-box">
+        <h4>📌 비회원 문의 안내</h4>
+        <ul>
+          <li>글 작성 시 설정하신 <strong>비밀번호</strong>는 추후 본인 글 삭제 시 필요하므로 기억해 주시기 바랍니다.</li>
+          <li>비밀글로 설정된 게시글은 작성 시 설정한 비밀번호 또는 <strong>관리자 로그인</strong> 상태에서만 열람하실 수 있습니다.</li>
+          <li>관리자가 답변을 등록하면 상태가 <span class="badge-status completed">답변 완료</span>로 자동 변경되며, 상세 보기에서 관리자 공식 코멘트를 확인하실 수 있습니다.</li>
+        </ul>
+      </div>
+    </div>
+  </main>
+
+  <!-- 글 작성 모달 -->
+  <div class="modal-overlay" id="writeModal">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3>새 문의글 작성</h3>
+        <button class="modal-close" id="closeWriteModal" aria-label="닫기">&times;</button>
+      </div>
+      <form id="writeForm" novalidate>
+        <div class="modal-body">
+          <div class="form-row">
+            <div class="form-group">
+              <label for="postAuthor">작성자명 (비회원) <span class="required">*</span></label>
+              <input type="text" id="postAuthor" placeholder="성함 또는 닉네임" required>
+            </div>
+            <div class="form-group">
+              <label for="postPassword">글 비밀번호 <span class="required">*</span></label>
+              <input type="password" id="postPassword" placeholder="삭제/비밀글 열람용 (4자리 이상)" required minlength="4">
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="postCategory">문의 유형</label>
+              <select id="postCategory">
+                <option value="기술 솔루션">기술 솔루션 / 클라우드</option>
+                <option value="AI 에이전트">사내 특화 AI / LLM 도입</option>
+                <option value="견적 및 제휴">프로젝트 견적 / 제휴 제안</option>
+                <option value="기타 문의">기타 일반 문의</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="postEmail">답변 알림용 이메일 (선택)</label>
+              <input type="email" id="postEmail" placeholder="your@email.com">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="postTitle">문의 제목 <span class="required">*</span></label>
+            <input type="text" id="postTitle" placeholder="문의하실 요점을 간결하게 적어주세요." required>
+          </div>
+
+          <div class="form-group">
+            <label for="postContent">문의 상세 내용 <span class="required">*</span></label>
+            <textarea id="postContent" rows="6" placeholder="현재 시스템 현황, 기술 요구사항, 문의 사항을 자세히 적어주시면 더욱 정확한 답변이 가능합니다." required></textarea>
+          </div>
+
+          <div class="form-group form-privacy">
+            <label class="checkbox-container">
+              <input type="checkbox" id="postIsSecret">
+              <span class="checkmark"></span>
+              <span>🔒 비밀글로 등록 (작성자와 관리자만 확인 가능)</span>
+            </label>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" id="cancelWriteModal">취소</button>
+          <button type="submit" class="btn btn-primary" id="savePostBtn">문의 등록하기</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 글 상세 보기 모달 -->
+  <div class="modal-overlay" id="detailModal">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-header">
+        <div class="detail-header-left">
+          <span id="detailCategory" class="badge-category">기술 솔루션</span>
+          <span id="detailStatus" class="badge-status">답변 대기</span>
+          <span id="detailSecretBadge" class="badge-secret" style="display: none;">🔒 비밀글</span>
+        </div>
+        <button class="modal-close" id="closeDetailModal" aria-label="닫기">&times;</button>
+      </div>
+
+      <div class="modal-body detail-modal-body">
+        <h2 id="detailTitle" class="detail-post-title">문의 제목이 표시됩니다.</h2>
+        
+        <div class="detail-meta">
+          <div>
+            <span class="meta-label">작성자:</span>
+            <strong id="detailAuthor">홍길동</strong>
+          </div>
+          <div>
+            <span class="meta-label">작성일시:</span>
+            <span id="detailDate">2026-11-10 14:00</span>
+          </div>
+          <div>
+            <span class="meta-label">조회수:</span>
+            <span id="detailViews">12</span>
+          </div>
+        </div>
+
+        <div class="detail-content-box">
+          <p id="detailContent">문의 내용 전문이 여기에 출력됩니다.</p>
+        </div>
+
+        <!-- 글 삭제 섹션 (비밀번호 입력 또는 관리자 원클릭 삭제) -->
+        <div class="post-action-bar">
+          <div class="user-delete-group" id="userDeleteArea">
+            <input type="password" id="deletePasswordInput" placeholder="글 비밀번호" class="input-sm">
+            <button class="btn btn-secondary btn-sm" id="userDeleteBtn">게시글 삭제</button>
+          </div>
+          <div class="admin-delete-group" id="adminDeleteArea" style="display: none;">
+            <button class="btn btn-danger btn-sm" id="adminDeleteBtn">⚠️ 관리자 권한 글 삭제</button>
+          </div>
+        </div>
+
+        <hr class="detail-divider">
+
+        <!-- 관리자 답변(댓글) 섹션 -->
+        <section class="comments-section">
+          <div class="comments-header">
+            <h3>💬 관리자 답변 (<span id="replyCount">0</span>)</h3>
+            <span class="reply-badge-desc">넥스트웨이브 공식 피드백</span>
+          </div>
+
+          <!-- 답변 목록 -->
+          <div class="replies-list" id="repliesList">
+            <!-- JavaScript 렌더링 -->
+          </div>
+
+          <!-- 관리자 전용 답변 작성 폼 -->
+          <div class="admin-reply-box" id="adminReplyBox" style="display: none;">
+            <div class="admin-reply-header">
+              <span class="badge-admin">관리자 전용 답변 작성</span>
+              <p>담당자 권한으로 본 문의글에 공식 답변(댓글)을 남길 수 있습니다.</p>
+            </div>
+            <form id="adminReplyForm">
+              <div class="form-group">
+                <textarea id="adminReplyContent" rows="4" placeholder="고객님의 문의에 대한 전문적이고 신속한 해결 가이드를 작성해주세요." required></textarea>
+              </div>
+              <div class="admin-reply-actions">
+                <button type="submit" class="btn btn-primary btn-sm">공식 답변 등록</button>
+              </div>
+            </form>
+          </div>
+
+          <!-- 관리자 미로그인 시 안내 문구 -->
+          <div class="guest-reply-notice" id="guestReplyNotice">
+            <span>🛡️ 답변 작성은 <strong>NextWave 관리자 계정</strong>으로 로그인한 상태에서만 가능합니다.</span>
+            <a href="admin.html" class="link-admin">관리자 로그인 바로가기 →</a>
+          </div>
+        </section>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" id="closeDetailBtn">닫기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 비밀글 열람 비밀번호 확인 모달 -->
+  <div class="modal-overlay" id="secretAuthModal">
+    <div class="modal-dialog modal-sm">
+      <div class="modal-header">
+        <h3>🔒 비밀글 열람 인증</h3>
+        <button class="modal-close" id="closeSecretAuthModal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="secret-notice-text">작성 시 입력하셨던 <strong>글 비밀번호</strong>를 입력해주세요.<br>(관리자는 로그인 시 비밀번호 없이 열람 가능합니다)</p>
+        <div class="form-group">
+          <input type="password" id="secretPasswordInput" placeholder="비밀번호 입력" autofocus>
+          <span class="error-msg" id="secretErrorMsg" style="display: none;">비밀번호가 일치하지 않습니다.</span>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" id="cancelSecretAuth">취소</button>
+        <button type="button" class="btn btn-primary" id="confirmSecretAuth">확인</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 토스트 알림창 -->
+  <div class="toast" id="boardToast" role="alert">
+    <div class="toast-icon">✓</div>
+    <div class="toast-body">
+      <strong class="toast-title">알림</strong>
+      <p class="toast-msg">내용이 처리되었습니다.</p>
+    </div>
+  </div>
+
+  <!-- 푸터 -->
+  <footer class="footer">
+    <div class="container footer-container">
+      <div class="footer-top">
+        <div class="footer-brand">
+          <div class="brand-logo">
+            <svg class="logo-icon" viewBox="0 0 32 32" fill="none">
+              <path d="M4 22L14 6L20 16L28 4" stroke="#6366F1" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+              <circle cx="28" cy="4" r="3" fill="#38BDF8"/>
+            </svg>
+            <span>NextWave</span>
+          </div>
+          <p class="brand-desc">
+            비즈니스 잠재력을 현실로 바꾸는 신뢰할 수 있는 엔터프라이즈 기술 파트너입니다.
+          </p>
+        </div>
+
+        <div class="footer-links-group">
+          <div class="footer-col">
+            <h4>솔루션</h4>
+            <ul>
+              <li><a href="index.html#services">클라우드 마이그레이션</a></li>
+              <li><a href="index.html#services">엔터프라이즈 AI 에이전트</a></li>
+              <li><a href="index.html#services">실시간 빅데이터 플랫폼</a></li>
+            </ul>
+          </div>
+
+          <div class="footer-col">
+            <h4>고객 센터</h4>
+            <ul>
+              <li><a href="board.html">비회원 문의 게시판</a></li>
+              <li><a href="admin.html">관리자 콘솔</a></li>
+              <li><a href="index.html#contact">직접 상담 신청</a></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <p>&copy; 2026 NextWave Solutions Inc. All rights reserved.</p>
+      </div>
+    </div>
+  </footer>
+
+  <script src="board.js"></script>
+</body>
+</html>
