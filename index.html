@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>넥스트웨이브 (NextWave) | 차세대 디지털 비즈니스 파트너</title>
+  <meta name="description" content="클라우드 혁신과 AI 데이터 솔루션으로 기업의 지속 가능한 성장을 지원하는 엔터프라이즈 파트너, 넥스트웨이브입니다.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Pretendard:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body data-theme="dark">
+  <!-- 네비게이션 바 -->
+  <header class="navbar" id="navbar">
+    <div class="container nav-container">
+      <a href="#hero" class="brand-logo">
+        <svg class="logo-icon" viewBox="0 0 32 32" fill="none">
+          <path d="M4 22L14 6L20 16L28 4" stroke="url(#logo-grad)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="28" cy="4" r="3" fill="#6366F1"/>
+          <defs>
+            <linearGradient id="logo-grad" x1="4" y1="22" x2="28" y2="4" gradientUnits="userSpaceOnUse">
+              <stop stop-color="#38BDF8"/>
+              <stop offset="1" stop-color="#6366F1"/>
+            </linearGradient>
+          </defs>
+        </svg>
+        <span>NextWave</span>
+      </a>
+
+      <nav class="nav-menu" id="navMenu">
+        <ul class="nav-links">
+          <li><a href="#about" class="nav-link">회사 소개</a></li>
+          <li><a href="#services" class="nav-link">핵심 솔루션</a></li>
+          <li><a href="#stats" class="nav-link">실적과 성과</a></li>
+          <li><a href="#cases" class="nav-link">성공 사례</a></li>
+          <li><a href="#contact" class="nav-link">도입 문의</a></li>
+        </ul>
+      </nav>
+
+      <div class="nav-actions">
+        <button class="theme-toggle" id="themeToggle" aria-label="테마 전환" title="다크/라이트 모드 전환">
+          <svg class="sun-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="5"></circle>
+            <path d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72l1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+          </svg>
+          <svg class="moon-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"></path>
+          </svg>
+        </button>
+        <a href="#contact" class="btn btn-primary nav-cta">상담 신청</a>
+        <button class="hamburger" id="hamburger" aria-label="메뉴 열기">
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <!-- 히어로 섹션 -->
+    <section class="hero-section" id="hero">
+      <div class="glow-orb orb-1"></div>
+      <div class="glow-orb orb-2"></div>
+      
+      <div class="container hero-container">
+        <div class="hero-content">
+          <div class="badge-pill">
+            <span class="pulse-dot"></span>
+            <span>2026 차세대 엔터프라이즈 AI & 클라우드 솔루션</span>
+          </div>
+          <h1 class="hero-title">
+            비즈니스의 혁신 속도를 <br>
+            <span class="gradient-text">압도적인 기술력</span>으로 가속합니다
+          </h1>
+          <p class="hero-desc">
+            넥스트웨이브는 독자적인 AI 데이터 플랫폼과 클라우드 네이티브 아키텍처를 기반으로 
+            글로벌 기업의 디지털 전환(DX)을 처음부터 끝까지 성공으로 이끕니다.
+          </p>
+          <div class="hero-buttons">
+            <a href="#contact" class="btn btn-primary btn-lg">솔루션 컨설팅 요청</a>
+            <a href="#services" class="btn btn-secondary btn-lg">핵심 역량 보기</a>
+          </div>
+
+          <div class="client-logos-wrapper">
+            <p class="client-label">국내외 180+ 선도 기업이 넥스트웨이브와 함께하고 있습니다</p>
+            <div class="client-badges">
+              <span class="client-tag">SAMSUNG ELEC.</span>
+              <span class="client-tag">HYUNDAI MOBIS</span>
+              <span class="client-tag">K-BANK</span>
+              <span class="client-tag">CJ LOGISTICS</span>
+              <span class="client-tag">LINE WORKS</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="hero-visual">
+          <div class="dashboard-preview">
+            <div class="preview-header">
+              <span class="dot red"></span>
+              <span class="dot yellow"></span>
+              <span class="dot green"></span>
+              <span class="preview-title">NextWave Enterprise Hub v3.4</span>
+            </div>
+            <div class="preview-body">
+              <div class="metric-row">
+                <div class="metric-card">
+                  <span class="metric-label">실시간 연산 효율</span>
+                  <span class="metric-val">+342%</span>
+                  <div class="progress-bar"><div class="progress-fill" style="width: 88%;"></div></div>
+                </div>
+                <div class="metric-card">
+                  <span class="metric-label">인프라 운영 비용 절감</span>
+                  <span class="metric-val">-41.5%</span>
+                  <div class="progress-bar"><div class="progress-fill accent" style="width: 65%;"></div></div>
+                </div>
+              </div>
+              <div class="activity-box">
+                <div class="activity-item">
+                  <span class="status-dot online"></span>
+                  <div class="activity-text">
+                    <strong>Autonomous Agent Orchestrator</strong>
+                    <p>분산 클라우드 파이프라인 자동 최적화 완료 (99.99% 가용성)</p>
+                  </div>
+                  <span class="activity-time">방금 전</span>
+                </div>
+                <div class="activity-item">
+                  <span class="status-dot busy"></span>
+                  <div class="activity-text">
+                    <strong>Data Intelligence Pipeline</strong>
+                    <p>대용량 트랜잭션 이상 감지 및 격리 조치 완료</p>
+                  </div>
+                  <span class="activity-time">3분 전</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 회사 소개 / 핵심 가치 -->
+    <section class="about-section" id="about">
+      <div class="container">
+        <div class="section-header">
+          <span class="sub-title">ABOUT NEXTWAVE</span>
+          <h2 class="section-title">기술 그 이상의 실질적 비즈니스 가치 창출</h2>
+          <p class="section-desc">
+            단순한 시스템 구축을 넘어 기업의 본질적 경쟁력을 극대화하는 맞춤형 엔지니어링 파트너십을 지향합니다.
+          </p>
+        </div>
+
+        <div class="values-grid">
+          <div class="value-card reveal">
+            <div class="icon-wrap">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+              </svg>
+            </div>
+            <h3>모듈형 아키텍처</h3>
+            <p>기존 레거시 시스템을 전면 교체하지 않고도 신속하게 확장 가능한 유연한 마이크로서비스 설계를 제공합니다.</p>
+          </div>
+
+          <div class="value-card reveal">
+            <div class="icon-wrap">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+              </svg>
+            </div>
+            <h3>실시간 AI 인텔리전스</h3>
+            <p>최신 생성형 AI 모델과 엔터프라이즈 정밀 검색(RAG) 엔진을 결합하여 데이터 기반 의사결정을 자동화합니다.</p>
+          </div>
+
+          <div class="value-card reveal">
+            <div class="icon-wrap">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+              </svg>
+            </div>
+            <h3>금융권 수준의 무결성 보안</h3>
+            <p>제로 트러스트 원칙과 엔드투엔드 암호화 체계로 민감한 기업 지적 재산과 고객 데이터를 철저히 보호합니다.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 핵심 솔루션 서비스 -->
+    <section class="services-section" id="services">
+      <div class="container">
+        <div class="section-header">
+          <span class="sub-title">CORE CAPABILITIES</span>
+          <h2 class="section-title">비즈니스를 견인하는 4대 엔터프라이즈 솔루션</h2>
+          <p class="section-desc">기획부터 배포, 24/7 안정적 운영까지 빈틈없는 풀스택 기술을 제공합니다.</p>
+        </div>
+
+        <div class="services-grid">
+          <article class="service-item reveal">
+            <div class="service-tag">Cloud Native</div>
+            <h3 class="service-name">엔터프라이즈 클라우드 마이그레이션</h3>
+            <p class="service-info">AWS, Azure, GCP 멀티 클라우드 환경에 최적화된 컨테이너 가상화 및 무중단 이전 솔루션을 설계합니다.</p>
+            <ul class="service-check-list">
+              <li>무중단 트래픽 컷오버 및 제로 다운타임</li>
+              <li>FinOps 기반 클라우드 인프라 비용 30% 이상 절감</li>
+              <li>IaC (Terraform, Kubernetes) 표준화</li>
+            </ul>
+          </article>
+
+          <article class="service-item reveal">
+            <div class="service-tag">AI Engineering</div>
+            <h3 class="service-name">사내 특화 LLM & Agent 빌더</h3>
+            <p class="service-info">기업 내부 문서와 데이터베이스를 학습 및 동기화하여 고도로 맞춤화된 업무 지원 에이전트를 구축합니다.</p>
+            <ul class="service-check-list">
+              <li>환각 현상을 최소화한 고정밀 RAG 파이프라인</li>
+              <li>보안 격리형 사내 프라이빗 온프레미스 인스턴스 구축</li>
+              <li>워크플로우 연계 자동화 봇 개발</li>
+            </ul>
+          </article>
+
+          <article class="service-item reveal">
+            <div class="service-tag">Big Data & Analytics</div>
+            <h3 class="service-name">실시간 빅데이터 분석 플랫폼</h3>
+            <p class="service-info">초당 수십만 건의 대규모 트래픽과 고객 행동 데이터를 지연 없이 수집, 가공하여 인사이트 대시보드로 시각화합니다.</p>
+            <ul class="service-check-list">
+              <li>Apache Kafka 기반 실시간 이벤트 스트리밍</li>
+              <li>데이터 레이크하우스 구축 및 지표 정합성 보증</li>
+              <li>사용자 행동 패턴 예측 머신러닝 모델 탑재</li>
+            </ul>
+          </article>
+
+          <article class="service-item reveal">
+            <div class="service-tag">DevSecOps & SRE</div>
+            <h3 class="service-name">지능형 모니터링 & 지속 운영 (SRE)</h3>
+            <p class="service-info">예상치 못한 시스템 장애를 사전에 예측하고 자동 복구(Self-healing)하는 최상위 안정성 인프라를 운영합니다.</p>
+            <ul class="service-check-list">
+              <li>SLA 99.99% 보증 및 24/7/365 관제 체계</li>
+              <li>CI/CD 파이프라인 자동 배포 및 롤백 자동화</li>
+              <li>지능형 이상 징후 알림 및 자동 스케일아웃</li>
+            </ul>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- 실적 통계 섹션 (Counter) -->
+    <section class="stats-section" id="stats">
+      <div class="container stats-container">
+        <div class="stat-box">
+          <span class="stat-number" data-target="99.99">0</span>
+          <span class="stat-unit">%</span>
+          <span class="stat-title">연간 서비스 가용성 SLA</span>
+          <p class="stat-desc">장애 없는 신뢰의 인프라</p>
+        </div>
+
+        <div class="stat-box">
+          <span class="stat-number" data-target="184">0</span>
+          <span class="stat-unit">+</span>
+          <span class="stat-title">엔터프라이즈 고객사</span>
+          <p class="stat-desc">국내외 탑티어 파트너십</p>
+        </div>
+
+        <div class="stat-box">
+          <span class="stat-number" data-target="42">0</span>
+          <span class="stat-unit">%</span>
+          <span class="stat-title">평균 운영 비용 절감</span>
+          <p class="stat-desc">도입 첫 분기 즉각적인 ROI</p>
+        </div>
+
+        <div class="stat-box">
+          <span class="stat-number" data-target="350">0</span>
+          <span class="stat-unit">억+</span>
+          <span class="stat-title">일일 처리 데이터 트랜잭션</span>
+          <p class="stat-desc">대규모 트래픽 안정적 처리</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 성공 사례 / 고객사 인터뷰 -->
+    <section class="cases-section" id="cases">
+      <div class="container">
+        <div class="section-header">
+          <span class="sub-title">SUCCESS STORIES</span>
+          <h2 class="section-title">넥스트웨이브를 경험한 리더들의 이야기</h2>
+          <p class="section-desc">실제 비즈니스 현장에서 증명된 변화와 혁신의 생생한 피드백입니다.</p>
+        </div>
+
+        <div class="testimonial-slider-container">
+          <div class="testimonial-track" id="testimonialTrack">
+            <!-- 후기 1 -->
+            <div class="testimonial-card">
+              <div class="stars">★★★★★</div>
+              <p class="quote">
+                "복잡하게 얽혀 있던 10년 된 레거시 주문 인프라를 다운타임 0초로 클라우드로 이전했습니다. 
+                넥스트웨이브의 탄탄한 엔지니어링 역량 덕분에 블랙프라이데이 피크 트래픽도 거뜬히 소화했습니다."
+              </p>
+              <div class="client-profile">
+                <div class="avatar">KD</div>
+                <div class="client-meta">
+                  <h4 class="name">김도현</h4>
+                  <span class="role">글로벌 이커머스 기업 CTO</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- 후기 2 -->
+            <div class="testimonial-card">
+              <div class="stars">★★★★★</div>
+              <p class="quote">
+                "사내 AI 어시스턴트 도입 후 기술 문서 검색과 고객 문의 응답 시간이 65% 단축되었습니다. 
+                철저한 데이터 보안 격리와 전담 엔지니어의 상시 케어가 가장 만족스러웠습니다."
+              </p>
+              <div class="client-profile">
+                <div class="avatar">SJ</div>
+                <div class="client-meta">
+                  <h4 class="name">박서진</h4>
+                  <span class="role">핀테크 금융 서비스 디지털전략본부장</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- 후기 3 -->
+            <div class="testimonial-card">
+              <div class="stars">★★★★★</div>
+              <p class="quote">
+                "수많은 IT 컨설팅 회사를 만났지만 비즈니스 맥락을 이렇게 깊이 이해하고 실무적인 최적화를 
+                제시한 팀은 넥스트웨이브가 유일했습니다. 다음 대규모 프로젝트도 반드시 함께할 것입니다."
+              </p>
+              <div class="client-profile">
+                <div class="avatar">MJ</div>
+                <div class="client-meta">
+                  <h4 class="name">이명준</h4>
+                  <span class="role">스마트 모빌리티 플랫폼 대표이사</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="slider-controls">
+            <button class="slider-btn prev" id="sliderPrev" aria-label="이전 후기">←</button>
+            <div class="slider-dots" id="sliderDots"></div>
+            <button class="slider-btn next" id="sliderNext" aria-label="다음 후기">→</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 문의 폼 섹션 -->
+    <section class="contact-section" id="contact">
+      <div class="container">
+        <div class="contact-wrapper">
+          <div class="contact-info">
+            <span class="sub-title">CONTACT US</span>
+            <h2 class="section-title">비즈니스의 다음 도약을<br>지금 준비하세요</h2>
+            <p class="contact-desc">
+              귀사의 당면 과제와 목표를 남겨주시면, 전문 솔루션 아키텍트가 24시간 이내에 
+              비즈니스 적합성 검토 및 맞춤 실행 계획을 회신드립니다.
+            </p>
+
+            <div class="info-items">
+              <div class="info-item">
+                <span class="info-icon">📍</span>
+                <div>
+                  <strong>본사 위치</strong>
+                  <p>서울특별시 강남구 테헤란로 152 강남파이낸스센터 24층</p>
+                </div>
+              </div>
+              <div class="info-item">
+                <span class="info-icon">✉️</span>
+                <div>
+                  <strong>이메일 문의</strong>
+                  <p>contact@nextwave-solutions.co.kr</p>
+                </div>
+              </div>
+              <div class="info-item">
+                <span class="info-icon">📞</span>
+                <div>
+                  <strong>대표 전화</strong>
+                  <p>02-6204-7800 (평일 09:00 ~ 18:00)</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="contact-form-box">
+            <form id="contactForm" novalidate>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="userName">성함 / 직책 <span class="required">*</span></label>
+                  <input type="text" id="userName" name="name" placeholder="홍길동 이사" required>
+                  <span class="error-msg">성함을 입력해주세요.</span>
+                </div>
+                <div class="form-group">
+                  <label for="companyName">회사명 <span class="required">*</span></label>
+                  <input type="text" id="companyName" name="company" placeholder="주식회사 넥스트" required>
+                  <span class="error-msg">회사명을 입력해주세요.</span>
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="userEmail">업무용 이메일 <span class="required">*</span></label>
+                  <input type="email" id="userEmail" name="email" placeholder="example@company.com" required>
+                  <span class="error-msg">올바른 이메일 주소를 입력해주세요.</span>
+                </div>
+                <div class="form-group">
+                  <label for="userPhone">연락처 <span class="required">*</span></label>
+                  <input type="tel" id="userPhone" name="phone" placeholder="010-1234-5678" required>
+                  <span class="error-msg">연락처를 입력해주세요.</span>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label for="serviceType">관심 솔루션 분야</label>
+                <select id="serviceType" name="service">
+                  <option value="cloud">클라우드 마이그레이션 & 아키텍처 최적화</option>
+                  <option value="ai">사내 특화 엔터프라이즈 AI / Agent 도입</option>
+                  <option value="data">빅데이터 분석 & 실시간 데이터 파이프라인</option>
+                  <option value="devops">DevSecOps & 무중단 SRE 운영 지원</option>
+                  <option value="general">기타 비즈니스 제휴 및 포괄적 자문</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="projectDetails">프로젝트 세부 내용 / 일정 <span class="required">*</span></label>
+                <textarea id="projectDetails" name="message" rows="4" placeholder="현재 시스템 현황, 도입 목표 일정, 예상 예산 규모 등을 자유롭게 적어주세요." required></textarea>
+                <span class="error-msg">상담 내용을 입력해주세요.</span>
+              </div>
+
+              <div class="form-privacy">
+                <label class="checkbox-container">
+                  <input type="checkbox" id="privacyConsent" required>
+                  <span class="checkmark"></span>
+                  <span class="privacy-text">개인정보 수집 및 상담 목적 이용에 동의합니다.</span>
+                </label>
+                <span class="error-msg privacy-error">개인정보 수집 동의가 필요합니다.</span>
+              </div>
+
+              <button type="submit" class="btn btn-primary btn-block submit-btn" id="submitBtn">
+                <span class="btn-text">무료 상담 신청 완료하기</span>
+                <span class="btn-spinner" aria-hidden="true"></span>
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- 푸터 -->
+  <footer class="footer">
+    <div class="container footer-container">
+      <div class="footer-top">
+        <div class="footer-brand">
+          <div class="brand-logo">
+            <svg class="logo-icon" viewBox="0 0 32 32" fill="none">
+              <path d="M4 22L14 6L20 16L28 4" stroke="#6366F1" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+              <circle cx="28" cy="4" r="3" fill="#38BDF8"/>
+            </svg>
+            <span>NextWave</span>
+          </div>
+          <p class="brand-desc">
+            비즈니스 잠재력을 현실로 바꾸는 신뢰할 수 있는 엔터프라이즈 기술 파트너입니다.
+          </p>
+        </div>
+
+        <div class="footer-links-group">
+          <div class="footer-col">
+            <h4>솔루션</h4>
+            <ul>
+              <li><a href="#services">클라우드 마이그레이션</a></li>
+              <li><a href="#services">엔터프라이즈 AI 에이전트</a></li>
+              <li><a href="#services">실시간 빅데이터 플랫폼</a></li>
+              <li><a href="#services">DevSecOps & SRE</a></li>
+            </ul>
+          </div>
+
+          <div class="footer-col">
+            <h4>회사</h4>
+            <ul>
+              <li><a href="#about">회사 소개</a></li>
+              <li><a href="#cases">고객 사례</a></li>
+              <li><a href="#stats">주요 성과</a></li>
+              <li><a href="#contact">채용 안내 (Careers)</a></li>
+            </ul>
+          </div>
+
+          <div class="footer-col">
+            <h4>고객 지원</h4>
+            <ul>
+              <li><a href="#contact">기술 상담 신청</a></li>
+              <li><a href="#contact">보안 정책</a></li>
+              <li><a href="#contact">개인정보처리방침</a></li>
+              <li><a href="#contact">이용약관</a></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <p>&copy; 2026 NextWave Solutions Inc. All rights reserved.</p>
+        <p class="corp-info">
+          (주)넥스트웨이브 솔루션즈 | 대표이사: 강도현 | 사업자등록번호: 214-88-99120 | 서울특별시 강남구 테헤란로 152
+        </p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- 토스트 알림 컴포넌트 -->
+  <div class="toast" id="toast" role="alert" aria-live="assertive">
+    <div class="toast-icon">✓</div>
+    <div class="toast-body">
+      <strong class="toast-title">상담 신청이 접수되었습니다!</strong>
+      <p class="toast-msg">담당 엔지니어가 24시간 이내에 연락드리겠습니다.</p>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
