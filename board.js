@@ -1,11 +1,13 @@
 /**
  * NextWave Solutions - Board & Admin Logic
- * Connected with Cloudflare Worker & D1 Database (with fallback)
+ * Enhanced with Skeleton UI, Pagination, Debouncing, and Anti-Double-Submit
  */
 
 const WORKER_API_BASE = 'https://company-inquiry-api.startupcode2021.workers.dev';
 const STORAGE_KEY_POSTS = 'nw_board_posts';
 const STORAGE_KEY_ADMIN = 'nw_admin_session';
+
+const PAGE_SIZE = 5; // 페이지당 표시할 문의글 수 (5개씩 페이징)
 
 // 초기 샘플 문의 데이터 (오프라인/네트워크 폴백용)
 const INITIAL_SAMPLE_POSTS = [
@@ -58,6 +60,104 @@ const INITIAL_SAMPLE_POSTS = [
 ];
 
 /* ==========================================================================
+   Utilities (Debounce, Escape, Date, Skeleton, Pagination)
+   ========================================================================== */
+function debounce(fn, delay = 300) {
+  let timer = null;
+  return function (...args) {
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(() => fn.apply(this, args), delay);
+  };
+}
+
+function escapeHtml(string) {
+  if (!string) return '';
+  const div = document.createElement('div');
+  div.textContent = string;
+  return div.innerHTML;
+}
+
+function formatDate(date) {
+  const d = date || new Date();
+  const pad = (n) => String(n).padStart(2, '0');
+  const y = d.getFullYear();
+  const m = pad(d.getMonth() + 1);
+  const day = pad(d.getDate());
+  const h = pad(d.getHours());
+  const min = pad(d.getMinutes());
+  return `${y}-${m}-${day} ${h}:${min}`;
+}
+
+// 스켈레톤 테이블 행 렌더링
+function renderSkeletonTable(tbody, rowCount = 5) {
+  if (!tbody) return;
+  tbody.innerHTML = '';
+  for (let i = 0; i < rowCount; i++) {
+    const tr = document.createElement('tr');
+    tr.className = 'skeleton-row';
+    tr.innerHTML = `
+      <td class="col-num"><span class="skeleton-pulse skeleton-text" style="width: 28px;"></span></td>
+      <td class="col-category"><span class="skeleton-pulse skeleton-pill"></span></td>
+      <td class="col-status"><span class="skeleton-pulse skeleton-pill" style="width: 58px;"></span></td>
+      <td class="col-title"><span class="skeleton-pulse skeleton-text" style="width: ${60 + (i % 3) * 15}%;"></span></td>
+      <td class="col-author"><span class="skeleton-pulse skeleton-text" style="width: 60px;"></span></td>
+      <td class="col-date"><span class="skeleton-pulse skeleton-text" style="width: 70px;"></span></td>
+      <td class="col-views"><span class="skeleton-pulse skeleton-text" style="width: 24px;"></span></td>
+    `;
+    tbody.appendChild(tr);
+  }
+}
+
+// 페이지네이션 컨트롤러 렌더링
+function renderPaginationUI(container, currentPage, totalPages, onPageClick) {
+  if (!container) return;
+  container.innerHTML = '';
+
+  if (totalPages <= 1) {
+    return; // 1페이지 이하면 페이지네이션 표시 안 함
+  }
+
+  // 이전 버튼
+  const prevBtn = document.createElement('button');
+  prevBtn.className = 'page-btn';
+  prevBtn.innerHTML = '‹ 이전';
+  prevBtn.disabled = currentPage <= 1;
+  prevBtn.onclick = () => onPageClick(currentPage - 1);
+  container.appendChild(prevBtn);
+
+  // 번호 버튼들
+  const maxButtons = 5;
+  let startPage = Math.max(1, currentPage - Math.floor(maxButtons / 2));
+  let endPage = Math.min(totalPages, startPage + maxButtons - 1);
+
+  if (endPage - startPage + 1 < maxButtons) {
+    startPage = Math.max(1, endPage - maxButtons + 1);
+  }
+
+  for (let p = startPage; p <= endPage; p++) {
+    const numBtn = document.createElement('button');
+    numBtn.className = `page-btn ${p === currentPage ? 'active' : ''}`;
+    numBtn.textContent = p;
+    numBtn.onclick = () => onPageClick(p);
+    container.appendChild(numBtn);
+  }
+
+  // 다음 버튼
+  const nextBtn = document.createElement('button');
+  nextBtn.className = 'page-btn';
+  nextBtn.innerHTML = '다음 ›';
+  nextBtn.disabled = currentPage >= totalPages;
+  nextBtn.onclick = () => onPageClick(currentPage + 1);
+  container.appendChild(nextBtn);
+
+  // 총 페이지 안내 텍스트
+  const info = document.createElement('span');
+  info.className = 'pagination-info';
+  info.textContent = `${currentPage} / ${totalPages} 페이지`;
+  container.appendChild(info);
+}
+
+/* ==========================================================================
    API Client with Cloudflare Worker
    ========================================================================== */
 async function fetchAPI(endpoint, options = {}) {
@@ -73,14 +173,11 @@ async function fetchAPI(endpoint, options = {}) {
     const data = await res.json();
     return { ok: res.ok, status: res.status, data };
   } catch (err) {
-    console.warn('API fetch failed, falling back to LocalStorage:', err);
+    console.warn('API fetch failed, fallback mode:', err);
     return { ok: false, error: err.message };
   }
 }
 
-/* ==========================================================================
-   LocalStorage Fallback Helpers
-   ========================================================================== */
 function getStoredPosts() {
   const data = localStorage.getItem(STORAGE_KEY_POSTS);
   if (!data) {
@@ -110,20 +207,6 @@ function setAdminLoggedIn(status) {
   }
 }
 
-function formatDate(date) {
-  const d = date || new Date();
-  const pad = (n) => String(n).padStart(2, '0');
-  const y = d.getFullYear();
-  const m = pad(d.getMonth() + 1);
-  const day = pad(d.getDate());
-  const h = pad(d.getHours());
-  const min = pad(d.getMinutes());
-  return `${y}-${m}-${day} ${h}:${min}`;
-}
-
-/* ==========================================================================
-   Theme & Toast
-   ========================================================================== */
 function initThemeToggle() {
   const themeToggle = document.getElementById('themeToggle');
   const storedTheme = localStorage.getItem('nw_theme') || 'dark';
@@ -169,10 +252,12 @@ function showToast(message, title = '알림', isError = false) {
    ========================================================================== */
 function initBoardPage() {
   const tableBody = document.getElementById('boardTableBody');
+  const paginationContainer = document.getElementById('boardPagination');
   if (!tableBody) return;
 
   let currentFilter = 'all';
   let searchQuery = '';
+  let currentPage = 1;
   let activeViewingPostId = null;
 
   // Elements
@@ -184,6 +269,7 @@ function initBoardPage() {
   const closeWriteBtn = document.getElementById('closeWriteModal');
   const cancelWriteBtn = document.getElementById('cancelWriteModal');
   const writeForm = document.getElementById('writeForm');
+  const savePostBtn = document.getElementById('savePostBtn');
   const searchInput = document.getElementById('searchInput');
   const filterBtns = document.querySelectorAll('.filter-btn');
 
@@ -230,22 +316,36 @@ function initBoardPage() {
       adminQuickLogout.onclick = () => {
         setAdminLoggedIn(false);
         updateAdminHeaderStatus();
-        renderBoard();
+        loadBoardData(currentPage);
         showToast('관리자 세션에서 로그아웃되었습니다.');
       };
     }
   }
 
-  // Render Board Posts from Cloudflare Worker D1
-  async function renderBoard() {
+  // Load and Render Board with Skeleton UI & Pagination
+  async function loadBoardData(page = 1) {
+    currentPage = page;
+
+    // 1. 스켈레톤 UI 즉시 표시
+    renderSkeletonTable(tableBody, 6);
+    const emptyState = document.getElementById('emptyState');
+    if (emptyState) emptyState.style.display = 'none';
+
+    // 2. 비동기 데이터 로드
+    const endpoint = `/api/posts?page=${page}&limit=${PAGE_SIZE}&filter=${currentFilter}&search=${encodeURIComponent(searchQuery)}`;
+    const res = await fetchAPI(endpoint);
+
     let posts = [];
-    const res = await fetchAPI(`/api/posts?filter=${currentFilter}&search=${encodeURIComponent(searchQuery)}`);
+    let totalPages = 1;
 
     if (res.ok && res.data.posts) {
       posts = res.data.posts;
+      if (res.data.pagination) {
+        totalPages = res.data.pagination.totalPages;
+      }
     } else {
-      // LocalStorage Fallback
-      posts = getStoredPosts().filter(post => {
+      // LocalStorage Fallback with local pagination
+      const all = getStoredPosts().filter(post => {
         const hasReplies = post.replies && post.replies.length > 0;
         if (currentFilter === 'waiting' && hasReplies) return false;
         if (currentFilter === 'completed' && !hasReplies) return false;
@@ -255,30 +355,27 @@ function initBoardPage() {
         }
         return true;
       });
+      totalPages = Math.ceil(all.length / PAGE_SIZE) || 1;
+      posts = all.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
     }
 
-    // Update Counts via Stats API
-    const statsRes = await fetchAPI('/api/stats');
-    if (statsRes.ok) {
-      document.getElementById('countAll').textContent = statsRes.data.total;
-      document.getElementById('countWaiting').textContent = statsRes.data.waiting;
-      document.getElementById('countCompleted').textContent = statsRes.data.completed;
-    } else {
-      const allLocal = getStoredPosts();
-      const waiting = allLocal.filter(p => !p.replies || p.replies.length === 0).length;
-      document.getElementById('countAll').textContent = allLocal.length;
-      document.getElementById('countWaiting').textContent = waiting;
-      document.getElementById('countCompleted').textContent = allLocal.length - waiting;
-    }
+    // 3. 통계 카운터 갱신
+    fetchAPI('/api/stats').then(statsRes => {
+      if (statsRes.ok) {
+        document.getElementById('countAll').textContent = statsRes.data.total;
+        document.getElementById('countWaiting').textContent = statsRes.data.waiting;
+        document.getElementById('countCompleted').textContent = statsRes.data.completed;
+      }
+    });
 
+    // 4. 테이블 렌더링
     tableBody.innerHTML = '';
-    const emptyState = document.getElementById('emptyState');
 
     if (!posts || posts.length === 0) {
       if (emptyState) emptyState.style.display = 'block';
+      if (paginationContainer) paginationContainer.innerHTML = '';
       return;
     }
-    if (emptyState) emptyState.style.display = 'none';
 
     posts.forEach(post => {
       const replyCount = post.reply_count || (post.replies ? post.replies.length : 0);
@@ -308,9 +405,14 @@ function initBoardPage() {
       `;
       tableBody.appendChild(row);
     });
+
+    // 5. 페이지네이션 렌더링
+    renderPaginationUI(paginationContainer, currentPage, totalPages, (newPage) => {
+      loadBoardData(newPage);
+      window.scrollTo({ top: tableBody.closest('.board-table-wrapper').offsetTop - 90, behavior: 'smooth' });
+    });
   }
 
-  // Row Click Handler
   function onRowClick(post) {
     const isSecret = Boolean(post.is_secret || post.isSecret);
 
@@ -326,7 +428,6 @@ function initBoardPage() {
     fetchAndOpenDetail(post.id);
   }
 
-  // Confirm Secret Password
   if (confirmSecretBtn) {
     confirmSecretBtn.onclick = async () => {
       const pw = secretPwInput.value.trim();
@@ -341,7 +442,6 @@ function initBoardPage() {
         secretAuthModal.classList.remove('open');
         fetchAndOpenDetail(pendingSecretPost.id);
       } else {
-        // Fallback check
         if (pendingSecretPost.password && pendingSecretPost.password === pw) {
           secretAuthModal.classList.remove('open');
           openDetailModalDirect(pendingSecretPost, pendingSecretPost.replies || []);
@@ -355,23 +455,19 @@ function initBoardPage() {
   if (cancelSecretBtn) cancelSecretBtn.onclick = () => secretAuthModal.classList.remove('open');
   if (closeSecretBtn) closeSecretBtn.onclick = () => secretAuthModal.classList.remove('open');
 
-  // Fetch Post Detail from Worker API
   async function fetchAndOpenDetail(postId) {
     activeViewingPostId = postId;
     const res = await fetchAPI(`/api/posts/${postId}`);
 
     if (res.ok && res.data.post) {
       openDetailModalDirect(res.data.post, res.data.replies || []);
-      renderBoard(); // Update views count in list
     } else {
-      // Local fallback
       const posts = getStoredPosts();
       const post = posts.find(p => p.id === postId);
       if (post) {
         post.views = (post.views || 0) + 1;
         saveStoredPosts(posts);
         openDetailModalDirect(post, post.replies || []);
-        renderBoard();
       }
     }
   }
@@ -450,13 +546,15 @@ function initBoardPage() {
     });
   }
 
-  // Admin Reply Submit
   if (adminReplyForm) {
     adminReplyForm.onsubmit = async (e) => {
       e.preventDefault();
       const contentEl = document.getElementById('adminReplyContent');
       const content = contentEl.value.trim();
       if (!content || !activeViewingPostId) return;
+
+      const submitBtn = adminReplyForm.querySelector('button[type="submit"]');
+      if (submitBtn) submitBtn.disabled = true;
 
       const res = await fetchAPI(`/api/posts/${activeViewingPostId}/replies`, {
         method: 'POST',
@@ -466,17 +564,18 @@ function initBoardPage() {
         })
       });
 
+      if (submitBtn) submitBtn.disabled = false;
+
       if (res.ok) {
         contentEl.value = '';
         fetchAndOpenDetail(activeViewingPostId);
         showToast('공식 답변이 성공적으로 등록되었습니다.');
       } else {
-        showToast('답변 등록에 실패했습니다: ' + (res.data?.error || ''), '오류', true);
+        showToast('답변 등록 실패: ' + (res.data?.error || ''), '오류', true);
       }
     };
   }
 
-  // Non-member delete
   if (userDeleteBtn) {
     userDeleteBtn.onclick = async () => {
       const pwInput = document.getElementById('deletePasswordInput');
@@ -494,7 +593,7 @@ function initBoardPage() {
       if (res.ok) {
         detailModal.classList.remove('open');
         pwInput.value = '';
-        renderBoard();
+        loadBoardData(currentPage);
         showToast('게시글이 정상적으로 삭제되었습니다.');
       } else {
         alert(res.data?.error || '비밀번호가 일치하지 않습니다.');
@@ -502,23 +601,25 @@ function initBoardPage() {
     };
   }
 
-  // Admin Instant Delete
   if (adminDeleteBtn) {
     adminDeleteBtn.onclick = async () => {
       if (!confirm('관리자 권한으로 이 게시글을 완전히 삭제하시겠습니까?')) return;
       const res = await fetchAPI(`/api/posts/${activeViewingPostId}`, { method: 'DELETE' });
       if (res.ok) {
         detailModal.classList.remove('open');
-        renderBoard();
+        loadBoardData(currentPage);
         showToast('관리자 권한으로 문의글이 삭제되었습니다.');
       }
     };
   }
 
-  // Create Post Submit
+  // 글 등록 폼 제출 (중복 클릭 방지 적용)
   if (writeForm) {
     writeForm.onsubmit = async (e) => {
       e.preventDefault();
+
+      if (savePostBtn && savePostBtn.disabled) return;
+
       const author = document.getElementById('postAuthor').value.trim();
       const password = document.getElementById('postPassword').value.trim();
       const category = document.getElementById('postCategory').value;
@@ -532,31 +633,48 @@ function initBoardPage() {
         return;
       }
 
-      const res = await fetchAPI('/api/posts', {
-        method: 'POST',
-        body: JSON.stringify({
-          title,
-          content,
-          author,
-          password,
-          category,
-          email,
-          is_secret: isSecret
-        })
-      });
+      if (password.length < 4) {
+        alert('비밀번호는 최소 4자리 이상이어야 합니다.');
+        return;
+      }
 
-      if (res.ok) {
-        writeForm.reset();
-        writeModal.classList.remove('open');
-        renderBoard();
-        showToast('Cloudflare D1에 문의글이 안전하게 등록되었습니다.');
-      } else {
-        showToast('등록 실패: ' + (res.data?.error || ''), '오류', true);
+      // 중복 제출 방지: 버튼 비활성화 & 텍스트 변경
+      if (savePostBtn) {
+        savePostBtn.disabled = true;
+        savePostBtn.textContent = '등록 중...';
+      }
+
+      try {
+        const res = await fetchAPI('/api/posts', {
+          method: 'POST',
+          body: JSON.stringify({
+            title,
+            content,
+            author,
+            password,
+            category,
+            email,
+            is_secret: isSecret
+          })
+        });
+
+        if (res.ok) {
+          writeForm.reset();
+          writeModal.classList.remove('open');
+          loadBoardData(1); // 1페이지로 리프레시
+          showToast('Cloudflare D1에 문의글이 안전하게 등록되었습니다.');
+        } else {
+          showToast('등록 실패: ' + (res.data?.error || ''), '오류', true);
+        }
+      } finally {
+        if (savePostBtn) {
+          savePostBtn.disabled = false;
+          savePostBtn.textContent = '문의 등록하기';
+        }
       }
     };
   }
 
-  // Modal open/close bindings
   if (openWriteBtn) openWriteBtn.onclick = () => writeModal.classList.add('open');
   if (emptyWriteBtn) emptyWriteBtn.onclick = () => writeModal.classList.add('open');
   if (closeWriteBtn) closeWriteBtn.onclick = () => writeModal.classList.remove('open');
@@ -569,19 +687,20 @@ function initBoardPage() {
       filterBtns.forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       currentFilter = btn.getAttribute('data-filter');
-      renderBoard();
+      loadBoardData(1);
     };
   });
 
+  // 300ms 디바운스 적용 검색
   if (searchInput) {
-    searchInput.oninput = (e) => {
+    searchInput.oninput = debounce((e) => {
       searchQuery = e.target.value.trim();
-      renderBoard();
-    };
+      loadBoardData(1);
+    }, 300);
   }
 
   updateAdminHeaderStatus();
-  renderBoard();
+  loadBoardData(1);
 }
 
 /* ==========================================================================
@@ -590,6 +709,7 @@ function initBoardPage() {
 function initAdminPage() {
   const loginSection = document.getElementById('loginSection');
   const dashboardSection = document.getElementById('dashboardSection');
+  const adminPagination = document.getElementById('adminPagination');
   if (!loginSection || !dashboardSection) return;
 
   const loginForm = document.getElementById('adminLoginForm');
@@ -608,6 +728,7 @@ function initAdminPage() {
 
   let currentTab = 'all';
   let adminSearch = '';
+  let adminPage = 1;
 
   if (autoFillBtn) {
     autoFillBtn.onclick = () => {
@@ -621,14 +742,13 @@ function initAdminPage() {
     if (isAdminLoggedIn()) {
       loginSection.style.display = 'none';
       dashboardSection.style.display = 'block';
-      renderAdminDashboard();
+      loadAdminDashboard(1);
     } else {
       loginSection.style.display = 'flex';
       dashboardSection.style.display = 'none';
     }
   }
 
-  // Handle Login via Worker D1
   if (loginForm) {
     loginForm.onsubmit = async (e) => {
       e.preventDefault();
@@ -662,28 +782,36 @@ function initAdminPage() {
     };
   }
 
-  async function renderAdminDashboard() {
-    // Stats
-    const statsRes = await fetchAPI('/api/stats');
-    if (statsRes.ok) {
-      document.getElementById('dashTotalCount').textContent = statsRes.data.total;
-      document.getElementById('dashWaitingCount').textContent = statsRes.data.waiting;
-      document.getElementById('dashCompletedCount').textContent = statsRes.data.completed;
-    }
-
-    // Posts
-    const postsRes = await fetchAPI(`/api/posts?filter=${currentTab}&search=${encodeURIComponent(adminSearch)}`);
-    const posts = (postsRes.ok && postsRes.data.posts) ? postsRes.data.posts : [];
-
+  async function loadAdminDashboard(page = 1) {
+    adminPage = page;
     const tbody = document.getElementById('adminTableBody');
     const emptyMsg = document.getElementById('adminEmptyMsg');
+
+    // 스켈레톤 행 표시
+    renderSkeletonTable(tbody, 5);
+    if (emptyMsg) emptyMsg.style.display = 'none';
+
+    // Stats
+    fetchAPI('/api/stats').then(statsRes => {
+      if (statsRes.ok) {
+        document.getElementById('dashTotalCount').textContent = statsRes.data.total;
+        document.getElementById('dashWaitingCount').textContent = statsRes.data.waiting;
+        document.getElementById('dashCompletedCount').textContent = statsRes.data.completed;
+      }
+    });
+
+    // Posts with Pagination
+    const res = await fetchAPI(`/api/posts?page=${page}&limit=${PAGE_SIZE}&filter=${currentTab}&search=${encodeURIComponent(adminSearch)}`);
+    const posts = (res.ok && res.data.posts) ? res.data.posts : [];
+    const totalPages = (res.ok && res.data.pagination) ? res.data.pagination.totalPages : 1;
+
     tbody.innerHTML = '';
 
     if (posts.length === 0) {
       if (emptyMsg) emptyMsg.style.display = 'block';
+      if (adminPagination) adminPagination.innerHTML = '';
       return;
     }
-    if (emptyMsg) emptyMsg.style.display = 'none';
 
     posts.forEach(post => {
       const isCompleted = (post.reply_count || 0) > 0;
@@ -714,6 +842,10 @@ function initAdminPage() {
 
       tr.querySelector('.open-reply-btn').onclick = () => openAdminModal(post.id);
       tbody.appendChild(tr);
+    });
+
+    renderPaginationUI(adminPagination, adminPage, totalPages, (newPage) => {
+      loadAdminDashboard(newPage);
     });
   }
 
@@ -774,7 +906,7 @@ function initAdminPage() {
         const res = await fetchAPI(`/api/replies/${reply.id}`, { method: 'DELETE' });
         if (res.ok) {
           openAdminModal(activeAdminPostId);
-          renderAdminDashboard();
+          loadAdminDashboard(adminPage);
           showToast('답변이 삭제되었습니다.');
         }
       };
@@ -801,7 +933,7 @@ function initAdminPage() {
       if (res.ok) {
         txt.value = '';
         openAdminModal(activeAdminPostId);
-        renderAdminDashboard();
+        loadAdminDashboard(adminPage);
         showToast('공식 답변이 Cloudflare D1에 등록되었습니다.');
       }
     };
@@ -813,7 +945,7 @@ function initAdminPage() {
       const res = await fetchAPI(`/api/posts/${activeAdminPostId}`, { method: 'DELETE' });
       if (res.ok) {
         adminModal.classList.remove('open');
-        renderAdminDashboard();
+        loadAdminDashboard(adminPage);
         showToast('게시글이 삭제되었습니다.');
       }
     };
@@ -827,26 +959,18 @@ function initAdminPage() {
       document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       currentTab = btn.getAttribute('data-tab');
-      renderAdminDashboard();
+      loadAdminDashboard(1);
     };
   });
 
-  const searchEl = document.getElementById('adminSearchInput');
-  if (searchEl) {
-    searchEl.oninput = (e) => {
+  if (searchEl = document.getElementById('adminSearchInput')) {
+    searchEl.oninput = debounce((e) => {
       adminSearch = e.target.value.trim();
-      renderAdminDashboard();
-    };
+      loadAdminDashboard(1);
+    }, 300);
   }
 
   checkAuthState();
-}
-
-function escapeHtml(string) {
-  if (!string) return '';
-  const div = document.createElement('div');
-  div.textContent = string;
-  return div.innerHTML;
 }
 
 document.addEventListener('DOMContentLoaded', () => {

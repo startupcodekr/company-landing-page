@@ -1,5 +1,6 @@
 /**
  * Cloudflare Worker - NextWave Inquiry Board API with D1
+ * Features: Pagination, Input Sanitization, Password Hashing, Security Headers
  */
 
 // Helper: Web Crypto SHA-256 with Salt
@@ -17,11 +18,14 @@ function generateSalt() {
   return Array.from(array, b => b.toString(16).padStart(2, '0')).join('');
 }
 
-// CORS Headers
+// Enhanced Security & CORS Headers
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Admin-Token',
+  'X-Content-Type-Options': 'nosniff',
+  'X-Frame-Options': 'DENY',
+  'Referrer-Policy': 'strict-origin-when-cross-origin',
   'Content-Type': 'application/json; charset=utf-8'
 };
 
@@ -51,21 +55,22 @@ export default {
       if (path === '/api/stats' && request.method === 'GET') {
         const totalRes = await db.prepare('SELECT COUNT(*) as count FROM posts').first();
         const completedRes = await db.prepare('SELECT COUNT(DISTINCT post_id) as count FROM replies').first();
-        const total = totalRes.count || 0;
-        const completed = completedRes.count || 0;
+        const total = totalRes ? (totalRes.count || 0) : 0;
+        const completed = completedRes ? (completedRes.count || 0) : 0;
         const waiting = total - completed;
 
         return jsonResponse({ total, completed, waiting });
       }
 
-      // 2. GET /api/posts - 게시글 목록 조회
+      // 2. GET /api/posts - 게시글 목록 조회 (페이지네이션 & 필터링 & 검색)
       if (path === '/api/posts' && request.method === 'GET') {
         const filter = url.searchParams.get('filter') || 'all';
         const search = url.searchParams.get('search') || '';
+        const page = Math.max(1, parseInt(url.searchParams.get('page') || '1', 10));
+        const limit = Math.min(50, Math.max(1, parseInt(url.searchParams.get('limit') || '10', 10)));
+        const offset = (page - 1) * limit;
 
-        let query = `
-          SELECT p.id, p.title, p.author, p.category, p.is_secret, p.views, p.created_at,
-                 COUNT(r.id) as reply_count
+        let baseQuery = `
           FROM posts p
           LEFT JOIN replies r ON p.id = r.post_id
         `;
@@ -79,31 +84,66 @@ export default {
         }
 
         if (conditions.length > 0) {
-          query += ' WHERE ' + conditions.join(' AND ');
+          baseQuery += ' WHERE ' + conditions.join(' AND ');
         }
 
-        query += ' GROUP BY p.id ORDER BY p.id DESC';
+        baseQuery += ' GROUP BY p.id';
 
-        const { results } = await db.prepare(query).bind(...params).all();
-
-        // 필터링 (waiting / completed)
-        let filtered = results;
+        // 필터 조건(HAVING 절)
+        let havingClause = '';
         if (filter === 'waiting') {
-          filtered = results.filter(r => r.reply_count === 0);
+          havingClause = ' HAVING COUNT(r.id) = 0';
         } else if (filter === 'completed') {
-          filtered = results.filter(r => r.reply_count > 0);
+          havingClause = ' HAVING COUNT(r.id) > 0';
         }
 
-        return jsonResponse({ posts: filtered });
+        // 전체 카운트 쿼리
+        const countQuery = `SELECT COUNT(*) as total FROM (SELECT p.id ${baseQuery} ${havingClause})`;
+        const countResult = await db.prepare(countQuery).bind(...params).first();
+        const total = countResult ? countResult.total : 0;
+        const totalPages = Math.ceil(total / limit) || 1;
+
+        // 페이징 데이터 쿼리
+        const selectQuery = `
+          SELECT p.id, p.title, p.author, p.category, p.is_secret, p.views, p.created_at,
+                 COUNT(r.id) as reply_count
+          ${baseQuery}
+          ${havingClause}
+          ORDER BY p.id DESC
+          LIMIT ? OFFSET ?
+        `;
+
+        const queryParams = [...params, limit, offset];
+        const { results } = await db.prepare(selectQuery).bind(...queryParams).all();
+
+        return jsonResponse({
+          posts: results,
+          pagination: {
+            page,
+            limit,
+            total,
+            totalPages
+          }
+        });
       }
 
       // 3. POST /api/posts - 비회원 새 문의글 작성
       if (path === '/api/posts' && request.method === 'POST') {
-        const body = await request.json();
-        const { title, content, author, password, category, email, is_secret } = body;
+        let body;
+        try {
+          body = await request.json();
+        } catch {
+          return jsonResponse({ error: '올바른 JSON 데이터가 아닙니다.' }, 400);
+        }
+
+        const { title, content, author, password, category, email, is_secret } = body || {};
 
         if (!title || !content || !author || !password) {
           return jsonResponse({ error: '필수 항목이 누락되었습니다.' }, 400);
+        }
+
+        if (password.length < 4) {
+          return jsonResponse({ error: '비밀번호는 최소 4자리 이상이어야 합니다.' }, 400);
         }
 
         const salt = generateSalt();
@@ -159,7 +199,11 @@ export default {
       const verifyMatch = path.match(/^\/api\/posts\/(\d+)\/verify$/);
       if (verifyMatch && request.method === 'POST') {
         const postId = parseInt(verifyMatch[1], 10);
-        const { password } = await request.json();
+        const { password } = await request.json().catch(() => ({}));
+
+        if (!password) {
+          return jsonResponse({ verified: false, error: '비밀번호를 입력해주세요.' }, 400);
+        }
 
         const post = await db.prepare('SELECT password_hash, salt FROM posts WHERE id = ?').bind(postId).first();
         if (!post) {
@@ -174,14 +218,13 @@ export default {
         }
       }
 
-      // 6. DELETE /api/posts/:id - 게시글 삭제 (비밀번호 확인 또는 관리자)
+      // 6. DELETE /api/posts/:id - 게시글 삭제
       if (postMatch && request.method === 'DELETE') {
         const postId = parseInt(postMatch[1], 10);
         const authHeader = request.headers.get('X-Admin-Token');
         const body = await request.json().catch(() => ({}));
         const { password } = body;
 
-        // 관리자 권한 확인 (토큰 검증)
         const isAdmin = authHeader === 'admin-authenticated-token';
 
         if (!isAdmin) {
@@ -203,7 +246,11 @@ export default {
 
       // 7. POST /api/admin/login - 관리자 로그인
       if (path === '/api/admin/login' && request.method === 'POST') {
-        const { username, password } = await request.json();
+        const { username, password } = await request.json().catch(() => ({}));
+
+        if (!username || !password) {
+          return jsonResponse({ error: '아이디와 비밀번호를 모두 입력해주세요.' }, 400);
+        }
 
         const admin = await db.prepare('SELECT id, username, password_hash, salt, name, role FROM admins WHERE username = ?')
           .bind(username).first();
@@ -217,7 +264,6 @@ export default {
           return jsonResponse({ error: '아이디 또는 비밀번호가 올바르지 않습니다.' }, 401);
         }
 
-        // 로그인 성공 시 관리자 토큰 반환
         return jsonResponse({
           success: true,
           token: 'admin-authenticated-token',
@@ -234,7 +280,7 @@ export default {
       const replyMatch = path.match(/^\/api\/posts\/(\d+)\/replies$/);
       if (replyMatch && request.method === 'POST') {
         const postId = parseInt(replyMatch[1], 10);
-        const { content, author } = await request.json();
+        const { content, author } = await request.json().catch(() => ({}));
 
         if (!content) {
           return jsonResponse({ error: '답변 내용을 입력해주세요.' }, 400);
@@ -269,14 +315,14 @@ export default {
         return jsonResponse({
           status: 'online',
           service: 'NextWave Inquiry API (Cloudflare Workers + D1)',
-          version: '1.0.0'
+          version: '1.1.0'
         });
       }
 
       return jsonResponse({ error: 'Not Found' }, 404);
 
     } catch (err) {
-      return jsonResponse({ error: err.message, stack: err.stack }, 500);
+      return jsonResponse({ error: err.message }, 500);
     }
   }
 };
